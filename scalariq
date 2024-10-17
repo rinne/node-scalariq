@@ -1,0 +1,169 @@
+#! /usr/bin/env node
+'use strict';
+
+const Lexer = require('./lexer');
+const Parser = require('./parser');
+const Generator = require('./generator');
+const Evaluator = require('./evaluator');
+
+const MathCalls = require('./math-calls');
+const StringCalls = require('./string-calls');
+const TimeCalls = require('./time-calls');
+
+const { createReadStream } = require('node:fs');
+const YAML = require('yaml');
+
+var opt = null;
+
+async function commandLineOptsParse() {
+    if (opt !== null) {
+        throw new Error('Options can only be parsed once');
+    }
+    const ou = require('optist/util');
+    opt = ((new (require('optist')))
+           .opts( [ { longName: 'debug',
+					  description: 'Enable debug messages' },
+					{ longName: 'tokenize',
+					  description: 'Tokenization of the input',
+					  conflictsWith: [ 'parse', 'generate' ] },
+					{ longName: 'parse',
+					  description: 'Parse the input',
+					  conflictsWith: [ 'tokenize', 'generate' ] },
+					{ longName: 'generate',
+					  description: 'Generate the expression from the input',
+					  conflictsWith: [ 'tokenize', 'parse' ] },
+					{ longName: 'no-output',
+					  description: 'Do not print the evaluated value',
+					  conflictsWith: [ 'yaml', 'json' ] },
+					{ longName: 'json',
+					  description: 'Parse the input',
+					  conflictsWith: [ 'no-output', 'yaml' ] },
+					{ longName: 'yaml',
+					  description: 'Parse the input',
+					  conflictsWith: [ 'no-output', 'json' ] },
+					{ longName: 'enable-math',
+					  description: 'Enable standard math functions for evaluator' },
+					{ longName: 'enable-string',
+					  description: 'Enable standard string functions for evaluator' },
+					{ longName: 'enable-time',
+					  description: 'Enable standard time functions for evaluator' },
+					{ longName: 'disable-limits',
+					  description: 'Disable evaluator safety limits',
+					  conflictsWith: [ 'limit-ops', 'limit-strings', 'limit-string-chars' ] },
+					{ longName: 'limit-ops',
+					  description: 'Maximum number of operations for evaluator',
+					  hasArg: true,
+					  defaultValue: '1000',
+					  optArgCb: ou.integerWithLimitsCbFactory(0,9999999),
+					  conflictsWith: [ 'disable-limits' ] },
+					{ longName: 'limit-strings',
+					  description: 'Maximum number of strings for evaluator',
+					  hasArg: true,
+					  defaultValue: '0',
+					  optArgCb: ou.integerWithLimitsCbFactory(0,9999999),
+					  conflictsWith: [ 'disable-limits' ] },
+					{ longName: 'limit-string-chars',
+					  description: 'Maximum total combined length of evaluated strings',
+					  hasArg: true,
+					  defaultValue: '100000',
+					  optArgCb: ou.integerWithLimitsCbFactory(0,9999999),
+					  conflictsWith: [ 'disable-limits' ] },
+					{ longName: 'input',
+					  shortName: 'i',
+					  hasArg: true,
+					  optArgCb: ou.existingFileNameCb,
+					  conflictsWith: [ 'input-string' ] },
+					{ longName: 'input-string',
+					  shortName: 's',
+					  hasArg: true,
+					  conflictsWith: [ 'input' ] } ] )
+           .help(process.argv[1].replace(/^.*\//, ''))
+           .parse(undefined, 0, 0));
+}
+
+function out(x) {
+	if (opt.value('json')) {
+		console.log(JSON.stringify(x, null, 2));
+	} else if (opt.value('yaml')) {
+		console.log(YAML.stringify(x));
+	}
+}
+
+(async function() {
+	try {
+		await commandLineOptsParse();
+		let tokens;
+		if (opt.value('input-string')) {
+			let l = new Lexer();
+			l.update(opt.value('input-string'));
+			tokens = l.final();
+		} else {
+			let input = opt.value('input') ? createReadStream(opt.value('input')) : process.stdin;
+			tokens = await new Promise(function(resolve, reject) {
+				let l = new Lexer();
+				function error(e) {
+					return reject(e);
+				}
+				function end() {
+					try {
+						return resolve(l.final());
+					} catch (e) {
+						return reject(e);
+					}
+				}
+				function data(d) {
+					try {
+						l.update(d);
+					} catch (e) {
+						return reject(e);
+					}
+				}
+				input.on('error', error);
+				input.on('end', end);
+				input.on('data', data);
+				
+			});
+		}
+		if (opt.value('tokenize')) {
+			out(tokens);
+			process.exit(0);
+		}
+		let p = new Parser(tokens);
+		let tree = p.parse()
+		if (opt.value('parse')) {
+			out(tree);
+			process.exit(0);
+		}
+		let g = new Generator(tree);
+		let expr = g.generate();
+		if (opt.value('generate')) {
+			out(expr);
+			process.exit(0);
+		}
+		let calls = Object.assign({},
+								  opt.value('enable-math') ? MathCalls : {},
+								  opt.value('enable-string') ? StringCalls : {},
+								  opt.value('enable-time') ? TimeCalls : {});
+		let limits = (opt.value('disable-limits') ?
+					  { opCount: 0,
+						strCount: 0,
+						strChars: 0 } :
+					  { opCount: opt.value('limit-ops'), 
+						strCount: opt.value('limit-strings'),
+						strChars: opt.value('limit-string-chars') });
+		let c = new Evaluator(expr, { calls, limits } );
+		let result = await c.evaluate();
+		if (opt.value('no-output')) {
+			process.exit(0);
+		}
+		if (opt.value('json') || opt.value('yaml')) {
+			out(result);
+		} else {
+			console.log((result === null) ? 'null' : result.toString());
+		}
+		process.exit(0);
+	} catch (e) {
+		console.log(opt.value('debug') ? e : e.message);
+		process.exit(1);
+	}
+})();

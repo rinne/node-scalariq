@@ -1,0 +1,31 @@
+# Requires math functions to be enabled in evaluator
+# scalariq --enable-math ...
+
+WITH (pro = 0.1)
+  WITH (a = CASE random() < pro CHOOSE 1 DEFAULT NULL,
+        b = CASE random() < pro CHOOSE 2 DEFAULT NULL,
+        c = CASE random() < pro CHOOSE 3 DEFAULT NULL,
+        d = CASE random() < pro CHOOSE 4 DEFAULT NULL,
+        e = CASE random() < pro CHOOSE 5 DEFAULT NULL,
+        f = CASE random() < pro CHOOSE 6 DEFAULT NULL,
+        g = CASE random() < pro CHOOSE 7 DEFAULT NULL,
+        h = CASE random() < pro CHOOSE 8 DEFAULT NULL,
+        i = CASE random() < pro CHOOSE 9 DEFAULT NULL,
+        j = CASE random() < pro CHOOSE 10 DEFAULT NULL,
+        k = CASE random() < pro CHOOSE 11 DEFAULT NULL,
+        l = CASE random() < pro CHOOSE 12 DEFAULT NULL,
+        m = CASE random() < pro CHOOSE 13 DEFAULT NULL,
+        n = CASE random() < pro CHOOSE 14 DEFAULT NULL,
+        o = CASE random() < pro CHOOSE 15 DEFAULT NULL,
+        p = CASE random() < pro CHOOSE 16 DEFAULT NULL,
+        q = CASE random() < pro CHOOSE 17 DEFAULT NULL,
+        r = CASE random() < pro CHOOSE 18 DEFAULT NULL,
+        s = CASE random() < pro CHOOSE 19 DEFAULT NULL,
+        t = CASE random() < pro CHOOSE 20 DEFAULT NULL,
+        u = CASE random() < pro CHOOSE 21 DEFAULT NULL,
+        v = CASE random() < pro CHOOSE 22 DEFAULT NULL,
+        w = CASE random() < pro CHOOSE 23 DEFAULT NULL,
+        x = CASE random() < pro CHOOSE 24 DEFAULT NULL,
+        y = CASE random() < pro CHOOSE 25 DEFAULT NULL,
+        z = CASE random() < pro CHOOSE 26 DEFAULT NULL)
+    COALESCE(a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x,y,z,'jackpot')

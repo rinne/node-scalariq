@@ -1,0 +1,11 @@
+# Expects evaluator to have external data functions sensor() and spot_price().
+CASE ((! sensor('a50ceab4-3c0d-4c7c-b23f-d2d5b66d3712', 'is_valid') |
+      sensor('a50ceab4-3c0d-4c7c-b23f-d2d5b66d3712', 'temperature') < 40))
+CHOOSE 'default'
+CASE spot_price('is_valid')
+CHOOSE
+   (CASE spot_price('daily_rate') ≤ 4 CHOOSE 'maximum'
+    CASE spot_price('daily_rate') ≥ 20 CHOOSE 'minimum'
+    DEFAULT spot_price('linear_index') * 0.8 + 10)
+DEFAULT
+     'default'

@@ -1,0 +1,8 @@
+WITH (one = 1, two = 1 + 1)
+  WITH (three = two * two - one)
+    WITH (true = !!!FALSE, false = !!!!FALSE)
+      WITH (empty = '')
+        CASE true = false CHOOSE WITH (empty2 = empty) empty
+        CASE two > one & two < three CHOOSE true
+        CASE FALSE CHOOSE 1+2*3
+        DEFAULT false

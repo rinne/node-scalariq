@@ -1,0 +1,36 @@
+{
+	"name": "scalariq",
+	"version": "0.1.0",
+	"description": "Simple Expression Language",
+	"main": "index.js",
+	"dependencies": {
+		"optist": "^2.0.1",
+		"yaml": "^2.6.0"
+	},
+	"scripts": {
+		"test": "node ./tests/test.js"
+	},
+	"engines": {
+		"node": ">=18.0.0"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/rinne/node-scalariq.git"
+	},
+	"keywords": [
+		"expression",
+		"evaluator",
+		"parser",
+		"language"
+	],
+	"author": {
+		"name": "Timo J. Rinne",
+		"email": "tri@iki.fi",
+		"url": "https://github.com/rinne/"
+	},
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/rinne/node-scalariq/issues"
+	},
+	"homepage": "https://github.com/rinne/node-scalariq#readme"
+}

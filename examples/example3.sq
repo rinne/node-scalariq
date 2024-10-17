@@ -1,0 +1,12 @@
+# Requires math functions to be enabled in evaluator
+# scalariq --enable-math ...
+
+WITH (rnd = floor(random() * 100))
+  WITH (rnd = floor(1 + rnd / 10))
+    CASE rnd = 1 CHOOSE 'one'
+    CASE rnd = 2 CHOOSE 'two'
+    CASE rnd = 3 CHOOSE 'three'
+    CASE rnd = 4 CHOOSE 'four'
+    CASE rnd = 5 CHOOSE 'five'
+    CASE rnd ≤ 7 CHOOSE 'six or seven'
+    DEFAULT 'eight or more'
