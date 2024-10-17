@@ -1,4 +1,4 @@
-# ScalariQ -- A Portable Scalar Expression Language
+# ScalarIQ -- A Portable Scalar Expression Language
 
 ## CAUTION!!!
 
@@ -6,10 +6,10 @@ This is work in progress.
 
 ## In a Nutshell
 
-ScalariQ is a lightweight, portable scalar expression language designed
+*ScalarIQ* is a lightweight, portable scalar expression language designed
 for evaluating scalar values from diverse external inputs. It is
 particularly useful for scenarios like periodically calculating
-automation results from sensor data. ScalariQ is not a general-purpose
+automation results from sensor data. *ScalarIQ* is not a general-purpose
 programming language; it is intentionally not Turing complete, lacking
 loops and recursion to ensure predictable and finite execution
 time. The language evaluates expressions that reduce to a single
@@ -65,15 +65,25 @@ In various applications, especially in automation and data processing,
 there is a need to compute scalar values based on dynamic
 inputs. Traditional programming languages might be overkill for such
 tasks, introducing unnecessary complexity and potential performance
-issues. ScalariQ addresses this by providing a simple yet powerful
+issues. *ScalarIQ* addresses this by providing a simple yet powerful
 expression language that can be easily integrated into different
 environments. Its design ensures that evaluations always terminate
 within a predefined maximum number of operations, making it reliable
 for real-time systems and resource-constrained applications.
 
+## Name
+
+*ScalarIQ* is a lightweight and efficient scalar expression language
+tailored for calculating scalar values from dynamic inputs. The name
+merges "Scalar" highlighting its focus on simple scalar data types
+(numbers, booleans, strings, and NULL) with "IQ," signifying that
+expression evaluation is an "instant query." Additionally, it reflects
+that *ScalarIQ* is the smart choice for high-IQ engineers, offering a
+safe and reliable solution for real-time calculations.
+
 ## Execution Model
 
-- Every ScalariQ expression reduces to a single scalar value.
+- Every *ScalarIQ* expression reduces to a single scalar value.
 - Expressions are compiled into a tree-like data structure, ensuring
   evaluation steps never exceed the number of nodes in the tree.
 - The executable tree can be encoded in JSON or YAML, facilitating
@@ -492,7 +502,7 @@ $ for i in $(seq 1 9) ; do echo "${i}: `node client.js`" ; done
 
 ## Shameless Self-promotion
 
-ScalariQ offers a streamlined and efficient way to compute scalar values
+*ScalarIQ* offers a streamlined and efficient way to compute scalar values
 from dynamic inputs without the overhead and risks of a general
 purpose programming language. Its design ensures that evaluations are
 quick, safe, and deterministic, making it safe in use cases where
@@ -500,6 +510,6 @@ expressions are provided by the client and periodically evaluated by
 the server,
 
 The evaluator part is relatively simple to implement, which makes
-ScalariQ an excellent choice also for embedded systems. ScalariQ is
+*ScalarIQ* an excellent choice also for embedded systems. *ScalarIQ* is
 also a great match for Versatile automation tasks that require
 periodic real-time response calculation.
