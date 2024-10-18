@@ -320,4 +320,4 @@ class Parser {
 
 }
 
-module.exports = Parser;
+(typeof(module) === 'object') && (module.exports = Parser);

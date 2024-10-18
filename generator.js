@@ -123,4 +123,4 @@ class Generator {
 
 }
 
-module.exports = Generator;
+(typeof(module) === 'object') && (module.exports = Generator);

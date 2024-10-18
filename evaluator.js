@@ -495,4 +495,4 @@ class Evaluator {
 
 }
 
-module.exports = Evaluator;
+(typeof(module) === 'object') && (module.exports = Evaluator);

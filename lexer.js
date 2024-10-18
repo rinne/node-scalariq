@@ -282,4 +282,4 @@ class Lexer {
 
 }
 
-module.exports = Lexer;
+(typeof(module) === 'object') && (module.exports = Lexer);
