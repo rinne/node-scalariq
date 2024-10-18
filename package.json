@@ -1,6 +1,6 @@
 {
 	"name": "scalariq",
-	"version": "0.2.0",
+	"version": "0.2.1",
 	"description": "Simple Expression Language",
 	"main": "index.js",
 	"dependencies": {
@@ -20,8 +20,11 @@
 	"keywords": [
 		"expression",
 		"evaluator",
+		"evaluation",
 		"parser",
-		"language"
+		"language",
+        "automation",
+		"real-time"
 	],
 	"author": {
 		"name": "Timo J. Rinne",
