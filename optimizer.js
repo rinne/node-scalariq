@@ -10,11 +10,22 @@ class Optimizer {
 	#expression;
 	#Evaluator;
 
-	check() {
+	check(calls) {
+		if ((calls === undefined) || (calls === null)) {
+			calls = undefined;
+		} else if (! Array.isArray(calls)) {
+			throw new Error('Invalid calls array submitted for code checker');
+		}
 		let stack = [];
-		let stats = { opCount: 0, calls: [], warnings: [], dynamicConstantNames: false, dynamicCallNames: false };
+		let stats = { opCount: 0, calls: [], warnings: [] };
 		JSON.parse(JSON.stringify(this.#expression));
-		this.#checkInternal(this.#expression, stack, stats);
+		this.#checkInternal(this.#expression, calls, stack, stats);
+		if (stats.warnings.length == 0) {
+			delete stats.warnings;
+		}
+		if (stats.calls.length == 0) {
+			delete stats.calls;
+		}
 		return stats;
 	}
 
@@ -28,7 +39,7 @@ class Optimizer {
 		return r;
 	}
 
-	#checkInternal(exp, stack, stats) {
+	#checkInternal(exp, calls, stack, stats) {
 		if ((exp === null) || Number.isFinite(exp) || (typeof(exp) === 'string') || (typeof(exp) === 'boolean')) {
 			return true;
 		}
@@ -48,18 +59,21 @@ class Optimizer {
 					throw new Error(`Invalid node #${stats.opCount}:call 'Empty av'`);
 				}
 				if (typeof(av[0]) === 'string') {
+					if (Array.isArray(calls) && (! calls.includes(av[0]))) {
+						throw new Error(`Invalid node #${stats.opCount}:lookup 'Unknown call name "${av[0]}"'`);
+					}
 					if (! stats.calls.includes(av[0])) {
 						stats.calls.push(av[0]);
 					}
 				} else if ((av[0] === null) || Number.isFinite(av[0]) || (typeof(av[0]) === 'boolean')) {
 					throw new Error(`Invalid node #${stats.opCount}:call 'Non-string call name'`);
 				} else {
-					this.#checkInternal(av[0], stack, stats);
+					this.#checkInternal(av[0], calls, stack, stats);
 					stats.warnings.push(`Node #${stats.opCount}:call 'Call name is not a constant and is therefore not checked'`);
 					stats.dynamicCallNames = true;
 				}
 				for (let a of av.slice(1)) {
-					this.#checkInternal(a, stack, stats);
+					this.#checkInternal(a, calls, stack, stats);
 				}
 			}
 			break;
@@ -79,17 +93,16 @@ class Optimizer {
 					} else if ((n === null) || Number.isFinite(n) || (typeof(n) === 'boolean')) {
 						throw new Error(`Invalid node #${stats.opCount}:with 'Non-string constant name'`);
 					} else {
-						this.#checkInternal(n, stack, stats);
+						this.#checkInternal(n, calls, stack, stats);
 						stats.warnings.push(`Node #${stats.opCount}:with 'Declared constant name is not a constant, which may cause uncaught undefined constants'`);
 						vars.add(null);
-						stats.dynamicConstantNames = true;
 					}
-					this.#checkInternal(v, stack, stats);
+					this.#checkInternal(v, calls, stack, stats);
 				}
 				let err;
 				try {
 					stack.push(vars);
-					this.#checkInternal(av.slice(-1)[0], stack, stats);
+					this.#checkInternal(av.slice(-1)[0], calls, stack, stats);
 				} catch (e) {
 					err = e;
 				} finally {
@@ -120,22 +133,21 @@ class Optimizer {
 					if (matchFound) {
 						// We are happy
 					} else if (dynamicFound) {
-						stats.warnings.push(`Node #${stats.opCount}:lookup 'Undeclared constant "${av[0]}" but enclosing scope includes dynamic constant names that possibly will satisfy it during evaluation'`);
+						stats.warnings.push(`Node #${stats.opCount}:lookup 'Unknown constant name "${av[0]}" but enclosing scope includes dynamic constant names that possibly will satisfy it during evaluation'`);
 					} else {
-						throw new Error(`Invalid node #${stats.opCount}:lookup 'Undeclared constant "${av[0]}"'`);
+						throw new Error(`Invalid node #${stats.opCount}:lookup 'Unknown constant name "${av[0]}"'`);
 					}
 				} else if ((av[0] === null) || Number.isFinite(av[0]) || (typeof(av[0]) === 'boolean')) {
 					throw new Error(`Invalid node #${stats.opCount}:lookup 'Non-string constant name'`);
 				} else {
-					this.#checkInternal(av[0], stack, stats);
+					this.#checkInternal(av[0], calls, stack, stats);
 					stats.warnings.push(`Node #${stats.opCount}:lookup 'Constant name is not a constant and is therefore not checked'`);
-					stats.dynamicConstantNames = true;
 				}
 			}
 			break;
 		default:
 			for (let a of av) {
-				this.#checkInternal(a, stack, stats);
+				this.#checkInternal(a, calls, stack, stats);
 			}
 		}
 		return true;
