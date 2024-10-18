@@ -22,11 +22,19 @@ async function timeExec(...av) {
 	return null;
 }
 
-module.exports = {
-	millisecond: (...av) => timeExec('millisecond', av),
-	second: (...av) => timeExec('second', av),
-	minute: (...av) => timeExec('minute', av),
-	quarter: (...av) => timeExec('quarter', av),
-	hour: (...av) => timeExec('hour', av),
-	day: (...av) => timeExec('day', av)
+{
+	let ex = {
+		millisecond: (...av) => timeExec('millisecond', av),
+		second: (...av) => timeExec('second', av),
+		minute: (...av) => timeExec('minute', av),
+		quarter: (...av) => timeExec('quarter', av),
+		hour: (...av) => timeExec('hour', av),
+		day: (...av) => timeExec('day', av)
+	};
+	if (typeof(module) === 'object') {
+		module.exports = ex;
+	}
+	if (typeof(scalariqExt) === 'object') {
+		scalariqExt['time'] = { name: "Time utilities", calls: ex };
+	}
 }

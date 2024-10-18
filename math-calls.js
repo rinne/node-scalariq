@@ -81,35 +81,42 @@ function average(...av) {
 	return r;
 }
 
-module.exports = {
-	average: average,
-	constant: constant,
-	random: random,
-	abs: (...av) => mathExec1('abs', av),
-	acos: (...av) => mathExec1('acos', av),
-	acosh: (...av) => mathExec1('acosh', av),
-	asin: (...av) => mathExec1('asin', av),
-	asinh: (...av) => mathExec1('asinh', av),
-	atan: (...av) => mathExec1('atan', av),
-	atanh: (...av) => mathExec1('atanh', av),
-	cbrt: (...av) => mathExec1('cbrt', av),
-	ceil: (...av) => mathExec1('ceil', av),
-	cos: (...av) => mathExec1('cos', av),
-	cosh: (...av) => mathExec1('cosh', av),
-	exp: (...av) => mathExec1('exp', av),
-	floor: (...av) => mathExec1('floor', av),
-	log: (...av) => mathExec1('log', av),
-	log10: (...av) => mathExec1('log10', av),
-	log2: (...av) => mathExec1('log2', av),
-	round: (...av) => mathExec1('round', av),
-	sign: (...av) => mathExec1('sign', av),
-	sin: (...av) => mathExec1('sin', av),
-	sinh: (...av) => mathExec1('sinh', av),
-	sqrt: (...av) => mathExec1('sqrt', av),
-	tan: (...av) => mathExec1('tan', av),
-	tanh: (...av) => mathExec1('tanh', av),
-	trunc: (...av) => mathExec1('trunc', av),
-	atan2: (...av) => mathExec2('atan2', av),
-	hypot: (...av) => mathExec2('hypot', av),
-	pow: (...av) => mathExec2('pow', av)
-};
+{
+	let ex = {
+		average: average,
+		constant: constant,
+		random: random,
+		abs: (...av) => mathExec1('abs', av),
+		acos: (...av) => mathExec1('acos', av),
+		acosh: (...av) => mathExec1('acosh', av),
+		asin: (...av) => mathExec1('asin', av),
+		asinh: (...av) => mathExec1('asinh', av),
+		atan: (...av) => mathExec1('atan', av),
+		atanh: (...av) => mathExec1('atanh', av),
+		cbrt: (...av) => mathExec1('cbrt', av),
+		ceil: (...av) => mathExec1('ceil', av),
+		cos: (...av) => mathExec1('cos', av),
+		cosh: (...av) => mathExec1('cosh', av),
+		exp: (...av) => mathExec1('exp', av),
+		floor: (...av) => mathExec1('floor', av),
+		log: (...av) => mathExec1('log', av),
+		log10: (...av) => mathExec1('log10', av),
+		log2: (...av) => mathExec1('log2', av),
+		round: (...av) => mathExec1('round', av),
+		sign: (...av) => mathExec1('sign', av),
+		sin: (...av) => mathExec1('sin', av),
+		sinh: (...av) => mathExec1('sinh', av),
+		sqrt: (...av) => mathExec1('sqrt', av),
+		tan: (...av) => mathExec1('tan', av),
+		tanh: (...av) => mathExec1('tanh', av),
+		trunc: (...av) => mathExec1('trunc', av),
+		atan2: (...av) => mathExec2('atan2', av),
+		hypot: (...av) => mathExec2('hypot', av),
+		pow: (...av) => mathExec2('pow', av) };
+	if (typeof(module) === 'object') {
+		module.exports = ex;
+	}
+	if (typeof(scalariqExt) === 'object') {
+		scalariqExt['math'] = { name: "Mathematical utilities", calls: ex };
+	}
+}

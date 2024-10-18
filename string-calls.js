@@ -22,4 +22,12 @@ function strlen(...av) {
 	return av[0].length;
 }
 
-module.exports = { strcat, strjoin, strlen };
+{
+	let ex = { strcat, strjoin, strlen };
+	if (typeof(module) === 'object') {
+		module.exports = ex;
+	}
+	if (typeof(scalariqExt) === 'object') {
+		scalariqExt['string'] = { name: "String manipulation utilities", calls: ex };
+	}
+}
