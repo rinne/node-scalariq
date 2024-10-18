@@ -44,3 +44,14 @@ async function evaluate(expression, externalFunctionsEnabled) {
 		throw e;
 	}
 }
+
+function check(expression) {
+	try {
+		let p = JSON.parse(expression);
+		let o = new Optimizer(p);
+		let r = o.check();
+		return JSON.stringify(r, null, 2);
+	} catch (e) {
+		throw e;
+	}
+}

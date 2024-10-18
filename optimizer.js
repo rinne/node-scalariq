@@ -1,16 +1,14 @@
 'use strict';
 
-if (typeof(Evaluator) === 'undefined') {
-	var Evaluator = require('./evaluator');
-}
-
 class Optimizer {
 
     constructor(expression) {
 		this.#expression = expression;
+		this.#Evaluator = ((typeof(Evaluator) === 'undefined') ? require('./evaluator') : Evaluator);
 	}
 	
 	#expression;
+	#Evaluator;
 
 	check() {
 		let stack = [];
@@ -147,7 +145,8 @@ class Optimizer {
 		if ((exp === null) || Number.isFinite(exp) || (typeof(exp) === 'string') || (typeof(exp) === 'boolean')) {
 			return exp;
 		}
-		let c = new Evaluator(exp);
+
+		let c = new this.#Evaluator(exp);
 		try {
 			let r = await c.evaluate(exp);
 			return r;
