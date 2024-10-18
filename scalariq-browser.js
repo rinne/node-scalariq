@@ -65,3 +65,23 @@ async function optimize(expression) {
 		throw e;
 	}
 }
+
+function registerCustomLookupFunction(name, title, lookupCb) {
+	let f = (async function() {
+		try {
+			let x = await lookupCb();
+			if (! ((x === null) || Number.isFinite(x) || (typeof(x) === 'string') || (typeof(x) === 'boolean'))) {
+				throw new Error(`Custom lookup function '${name}' returns non-scalar value`);
+			}
+			return x;
+		} catch (e) {
+			console.log(e);
+			return null;
+		}
+	});
+	let key = '~~~' + (Math.floor(Math.random() * Math.pow(36, 10)).toString(36));
+	let calls = {};
+	calls[name] = f;
+	scalariqExt[key] = { name: title, calls };
+	return key;
+}
