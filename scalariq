@@ -10,6 +10,7 @@ const Evaluator = require('./evaluator');
 const MathCalls = require('./math-calls');
 const StringCalls = require('./string-calls');
 const TimeCalls = require('./time-calls');
+const TypeCalls = require('./type-calls');
 
 const { createReadStream } = require('node:fs');
 const YAML = require('yaml');
@@ -53,6 +54,8 @@ async function commandLineOptsParse() {
 					  description: 'Enable standard string functions for evaluator' },
 					{ longName: 'enable-time',
 					  description: 'Enable standard time functions for evaluator' },
+					{ longName: 'enable-type',
+					  description: 'Enable standard type functions for evaluator' },
 					{ longName: 'disable-limits',
 					  description: 'Disable evaluator safety limits',
 					  conflictsWith: [ 'limit-ops', 'limit-strings', 'limit-string-chars' ] },
@@ -160,7 +163,8 @@ function out(x) {
 		let calls = Object.assign({},
 								  opt.value('enable-math') ? MathCalls : {},
 								  opt.value('enable-string') ? StringCalls : {},
-								  opt.value('enable-time') ? TimeCalls : {});
+								  opt.value('enable-time') ? TimeCalls : {},
+								  opt.value('enable-type') ? TypeCalls : {});
 		let limits = (opt.value('disable-limits') ?
 					  { opCount: 0,
 						strCount: 0,
