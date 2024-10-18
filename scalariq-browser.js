@@ -72,7 +72,6 @@ async function optimize(expression) {
 		let p = JSON.parse(expression);
 		let o = new Optimizer(p);
 		let r = await o.optimize();
-		console.log(JSON.stringify(r, null, 2));
 		return JSON.stringify(r, null, 2);
 	} catch (e) {
 		throw e;
