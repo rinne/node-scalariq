@@ -1,5 +1,9 @@
 'use strict';
 
+if (typeof(Evaluator) === 'undefined') {
+	var Evaluator = require('./evaluator');
+}
+
 class Optimizer {
 
     constructor(expression) {
@@ -11,8 +15,19 @@ class Optimizer {
 	check() {
 		let stack = [];
 		let stats = { opCount: 0, calls: [], warnings: [], dynamicConstantNames: false, dynamicCallNames: false };
+		JSON.parse(JSON.stringify(this.#expression));
 		this.#checkInternal(this.#expression, stack, stats);
 		return stats;
+	}
+
+	async optimize() {
+		this.check();
+		let exp = JSON.parse(JSON.stringify(this.#expression));
+		let r = await this.#optimizeInternal(exp);
+		if ((r === null) || Number.isFinite(r) || (typeof(r) === 'string') || (typeof(r) === 'boolean')) {
+			return { op: 'expression', av: [r] };
+		}
+		return r;
 	}
 
 	#checkInternal(exp, stack, stats) {
@@ -126,6 +141,26 @@ class Optimizer {
 			}
 		}
 		return true;
+	}
+
+	async #optimizeInternal(exp) {
+		if ((exp === null) || Number.isFinite(exp) || (typeof(exp) === 'string') || (typeof(exp) === 'boolean')) {
+			return exp;
+		}
+		let c = new Evaluator(exp);
+		try {
+			let r = await c.evaluate(exp);
+			return r;
+		} catch (e) {
+		}
+		for (let i = 0; i < exp.av.length; i++) {
+			try {
+				let r = await this.#optimizeInternal(exp.av[i]);
+				exp.av[i] = r;
+			} catch (e) {
+			}
+		}
+		return exp;
 	}
 
 }

@@ -33,6 +33,8 @@ async function commandLineOptsParse() {
 					{ longName: 'generate',
 					  description: 'Generate the expression from the input',
 					  conflictsWith: [ 'tokenize', 'parse', 'check' ] },
+					{ longName: 'optimize',
+					  description: 'Optimize the compiled expression' },
 					{ longName: 'check',
 					  description: 'Perform a check for the compiled expression',
 					  conflictsWith: [ 'tokenize', 'parse', 'generate' ] },
@@ -143,6 +145,11 @@ function out(x) {
 		if (opt.value('generate')) {
 			out(expr);
 			process.exit(0);
+		}
+		if (opt.value('optimize')) {
+			let o = new Optimizer(expr);
+			let oexpr = await o.optimize();
+			expr = oexpr;
 		}
 		if (opt.value('check')) {
 			let o = new Optimizer(expr);
