@@ -55,3 +55,26 @@ function check(expression) {
 		throw e;
 	}
 }
+
+function check(expression) {
+	try {
+		let p = JSON.parse(expression);
+		let o = new Optimizer(p);
+		let r = o.check();
+		return JSON.stringify(r, null, 2);
+	} catch (e) {
+		throw e;
+	}
+}
+
+async function optimize(expression) {
+	try {
+		let p = JSON.parse(expression);
+		let o = new Optimizer(p);
+		let r = await o.optimize();
+		console.log(JSON.stringify(r, null, 2));
+		return JSON.stringify(r, null, 2);
+	} catch (e) {
+		throw e;
+	}
+}
