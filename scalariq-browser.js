@@ -1,6 +1,12 @@
 'use strict';
 
-const externalFunctions = [ { name: "String", value: "string" }, { name: "Time", value: "time" }, { name: "Math", value: "math" } ];
+{
+	if (typeof(window) === 'object') {
+		window.scalariqExt = {};
+	} else if (typeof(global) === 'object') {
+		global.scalariqExt = {};
+	}
+}
 
 function compile(input) {
 	try {
@@ -19,15 +25,22 @@ function compile(input) {
 }
 
 async function evaluate(expression, externalFunctionsEnabled) {
-
 	try {
 		let p = JSON.parse(expression);
-		let c = new Evaluator(p);
+		let calls = {};
+		if (Array.isArray(externalFunctionsEnabled)) {
+			for (let ext of externalFunctionsEnabled) {
+				let cd = window?.scalariqExt?.[ext] ?? global?.scalariqExt?.[ext] ?? null;
+				if (! cd?.calls) {
+					throw new Error(`Can't enable external function set '${ext}'`);
+				}
+				Object.assign(calls, cd.calls);
+			}
+		}
+		let c = new Evaluator(p, { calls });
 		let r = await c.evaluate(expression);
 		return JSON.stringify(r);
 	} catch (e) {
-		alert(e.message);
-		return undefined;
+		throw e;
 	}
-
 }
