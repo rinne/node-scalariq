@@ -19,8 +19,7 @@ function compile(input) {
 		let expression = g.generate();
 		return JSON.stringify(expression, null, 2);
 	} catch (e) {
-		alert(e.message);
-		return undefined;
+		throw e;
 	}
 }
 
