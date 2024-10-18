@@ -108,7 +108,14 @@ class Generator {
 		case 'WithExpression':
 			{
 				let av = [];
+				let names = [];
 				for (let ve of tree.variables) {
+					if (typeof(ve.name) === 'string') {
+						if (names.includes(ve.name)) {
+							throw new Error(`Duplicate constant name '${ve.name}' in WITH statement`);
+						}
+						names.push(ve.name);
+					}
 					av.push(ve.name);
 					av.push(this.#generate(ve.value, false));
 				}
