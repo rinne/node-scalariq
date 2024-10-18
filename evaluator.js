@@ -467,7 +467,7 @@ class Evaluator {
 	}
 
 	#validScalar(x) {
-		return  ((x === null) || Number.isFinite(x) || (typeof(x) === 'string') || (typeof(x) === 'boolean'));
+		return ((x === null) || Number.isFinite(x) || (typeof(x) === 'string') || (typeof(x) === 'boolean'));
 	}
 
 	#validBoolean(x) {
@@ -479,7 +479,7 @@ class Evaluator {
 	}
 
 	#validNumber(x) {
-		return  Number.isFinite(x);
+		return Number.isFinite(x);
 	}
 
 	#booleanizeScalar(x) {
