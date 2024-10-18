@@ -4,6 +4,7 @@
 const Lexer = require('./lexer');
 const Parser = require('./parser');
 const Generator = require('./generator');
+const Optimizer = require('./optimizer');
 const Evaluator = require('./evaluator');
 
 const MathCalls = require('./math-calls');
@@ -25,13 +26,16 @@ async function commandLineOptsParse() {
 					  description: 'Enable debug messages' },
 					{ longName: 'tokenize',
 					  description: 'Tokenization of the input',
-					  conflictsWith: [ 'parse', 'generate' ] },
+					  conflictsWith: [ 'parse', 'generate', 'check' ] },
 					{ longName: 'parse',
 					  description: 'Parse the input',
-					  conflictsWith: [ 'tokenize', 'generate' ] },
+					  conflictsWith: [ 'tokenize', 'generate', 'check' ] },
 					{ longName: 'generate',
 					  description: 'Generate the expression from the input',
-					  conflictsWith: [ 'tokenize', 'parse' ] },
+					  conflictsWith: [ 'tokenize', 'parse', 'check' ] },
+					{ longName: 'check',
+					  description: 'Perform a check for the compiled expression',
+					  conflictsWith: [ 'tokenize', 'parse', 'generate' ] },
 					{ longName: 'no-output',
 					  description: 'Do not print the evaluated value',
 					  conflictsWith: [ 'yaml', 'json' ] },
@@ -138,6 +142,12 @@ function out(x) {
 		let expr = g.generate();
 		if (opt.value('generate')) {
 			out(expr);
+			process.exit(0);
+		}
+		if (opt.value('check')) {
+			let o = new Optimizer(expr);
+			let check = o.check();
+			out(check);
 			process.exit(0);
 		}
 		let calls = Object.assign({},
