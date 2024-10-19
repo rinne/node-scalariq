@@ -75,8 +75,7 @@ function registerCustomLookupFunction(name, title, lookupCb) {
 			}
 			return x;
 		} catch (e) {
-			console.log(e);
-			return null;
+			throw e;
 		}
 	});
 	let key = '~~~' + (Math.floor(Math.random() * Math.pow(36, 10)).toString(36));
