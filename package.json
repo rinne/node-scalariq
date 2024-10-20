@@ -1,6 +1,6 @@
 {
 	"name": "scalariq",
-	"version": "0.2.3",
+	"version": "0.5.0",
 	"description": "Simple Expression Language",
 	"main": "index.js",
 	"dependencies": {

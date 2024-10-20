@@ -108,16 +108,39 @@ class Generator {
 		case 'WithExpression':
 			{
 				let av = [];
-				let names = [];
-				for (let ve of tree.variables) {
-					if (typeof(ve.name) === 'string') {
-						if (names.includes(ve.name)) {
-							throw new Error(`Duplicate constant name '${ve.name}' in WITH statement`);
+				let vnames = [];
+				let fnames = [];
+				for (let ve of tree.assignments) {
+					switch (ve.type) {
+					case 'variable':
+						if (typeof(ve.name) === 'string') {
+							if (vnames.includes(ve.name)) {
+								throw new Error(`Duplicate constant name '${ve.name}' in WITH statement`);
+							}
+							vnames.push(ve.name);
+							av.push(ve.name);
+							av.push(this.#generate(ve.value, false));
 						}
-						names.push(ve.name);
+						break;
+					case 'function':
+						if (typeof(ve.name) === 'string') {
+							if (fnames.includes(ve.name)) {
+								throw new Error(`Duplicate function name '${ve.name}' in WITH statement`);
+							}
+							fnames.push(ve.name);
+						}
+						av.push(ve.name);
+						{
+							if ((new Set(ve.parameters)).size !== ve.parameters.length) {
+								throw new Error(`Duplicate parameter name for function '${ve.name}' in WITH statement`);
+							}
+							let lav = [...ve.parameters, this.#generate(ve.expression, false) ];
+							av.push( { op: 'lambda', av: lav } );
+						}
+						break;
+					default:
+						throw new Error(`Unknown assignment type '${ve.type}' in WITH statement`);
 					}
-					av.push(ve.name);
-					av.push(this.#generate(ve.value, false));
 				}
 				av.push(this.#generate(tree.expression, false));
 				return { op: 'with', av };

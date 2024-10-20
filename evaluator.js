@@ -1,5 +1,7 @@
 'use strict';
 
+const LAMBDA_PREFIX = " λ\ufeff";
+
 class Evaluator {
 
     constructor(expression, config) {
@@ -85,7 +87,7 @@ class Evaluator {
 		} else {
 			throw new Error('Invalid expression av');
 		}
-		switch (expression?.op) {
+		switch (expression.op) {
 		case 'expression':
 			{
 				if (av.length != 1) {
@@ -294,7 +296,7 @@ class Evaluator {
 				let right = await this.#evaluateInternal(av.shift(), stack, stats);
 				if (right === null) {
 					return null;
-				} else if (! (this.#validNumber(right) && (right != 0))) {
+				} else if (! (this.#validNumber(right))) {
 					throw new Error('Invalid expression operand');
 				}
 				switch (expression.op) {
@@ -353,9 +355,76 @@ class Evaluator {
 				if (! this.#validString(name)) {
 					throw new Error('Invalid call name');
 				}
+				// First see if we can find a lambda for that name.
+				{
+					let key = LAMBDA_PREFIX + name;
+					for (let i = stack.length - 1; i >= 0; i--) {
+						let lambda = stack[i].get(key);
+						if (lambda === undefined) {
+							continue;
+						}
+						// Removing this check would enable
+						// recursion. Programs would still work, but
+						// the finite execution time would no longer
+						// be guaranteed. It would also make the
+						// language Turing complete, which is against
+						// the core idea of the language. If you
+						// change this, be sure to call the resulting
+						// language something different from ScalarIQ!
+						if (lambda.busy) {
+							throw new Error(`Lambda '${name}' is busy (attempted recursion?)`);
+						}
+						// Both includes one non-parameter, but the length should match.
+						if (expression.av.length !== lambda?.expression?.av.length) {
+							throw new Error(`Lambda '${name}' parameter count mismatch`);
+						}
+						{
+							// I agree that this loop is a bit weird,
+							// so I'll document it :).
+							let av = [];
+							// Push the first parameter name or
+							// expression if there are no parameters.
+							av.push(lambda.expression.av[0]);
+							for (let i = 1; i < expression.av.length; i++) {
+								// Push the value of the last pushed
+								// parameter name and name of the next
+								// parameter or expression if there
+								// are no more parameters.
+								av.push(expression.av[i], lambda.expression.av[i]);
+							}
+							// And in the end we have av that has
+							// parameter name - parameter value pairs
+							// and at the end the expression to be
+							// evaluated. From that we'll fabricate a 'with'
+							// expression to be evaluated.
+							let o = { op: 'with', av };
+							let r, err;
+							try {
+								lambda.busy = true;
+								r = await this.#evaluateInternal(o, stack, stats);
+								if (! this.#validScalar(r)) {
+									throw new Error(`Invalid lambda call '${name}' return value`);
+								}
+							} catch (e) {
+								err = e;
+								r = undefined;
+							} finally {
+								lambda.busy = false;
+							}
+							if (err) {
+								throw err;
+							}
+							return r;
+						}
+					}
+				}
+				// Then we'll look into externally provided functions.
 				let cb = this.#config.calls.get(name);
+				if (cb === undefined) {
+					throw new Error(`Undefined expression call '${name}'`);
+				}
 				if (! (typeof(cb) === 'function')) {
-					throw new Error(`Invalid expression callback ('${name}')`);
+					throw new Error(`Invalid expression callback '${name}'`);
 				}
 				let cav = [];
 				for (let o of av) {
@@ -367,7 +436,7 @@ class Evaluator {
 				}
 				let v = await cb(...cav);
 				if (! this.#validScalar(v)) {
-					throw new Error('Invalid expression call value');
+					throw new Error(`Invalid expression call '${name}' return value`);
 				}
 				if (this.#validString(v)) {
 					stats.strCount++;
@@ -413,11 +482,17 @@ class Evaluator {
 					if (! this.#validString(name)) {
 						throw new Error('Invalid variable name');
 					}
-					let v = await this.#evaluateInternal(av.shift(), stack, stats);
-					if (! this.#validScalar(v)) {
-						throw new Error('Invalid expression operand value');
+					let expression = av.shift();
+					if (expression?.op === 'lambda') {
+						let lambda = { busy: false, expression };
+						scope.set(LAMBDA_PREFIX + name, lambda);
+					} else {
+						let v = await this.#evaluateInternal(expression, stack, stats);
+						if (! this.#validScalar(v)) {
+							throw new Error('Invalid expression operand value');
+						}
+						scope.set(name, v);
 					}
-					scope.set(name, v);
 				}
 				{
 					let v, error;
@@ -462,7 +537,7 @@ class Evaluator {
 				return (v === null);
 			}
 		default:
-			throw new Error('Invalid expression');
+			throw new Error(`Invalid expression: op='${expression.op}'`);
 		}
 	}
 

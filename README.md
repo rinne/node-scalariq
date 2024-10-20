@@ -93,10 +93,14 @@ safe and reliable solution for real-time calculations.
     recursion
   - This ensures finite execution with a predictable maximum number
     of executed operations for expression evaluation.
-- Language does not have a built-in utility functions.
+- WITH statement allows definition of constants and lambda expressions
+  (= functions) for the enclosed expression. Lambdas cannot be called
+  recursively.
+- No built-in utility functions
   - Functions are externally provided to the evaluator.
   - A selection of functions that is offered by the evaluator
     varies according to the use case.
+  - A minimum number of functions should be provided.
 - Safe server side evaluation of client provided expressions
   - When expressions need to be evaluated on a server
     (e.g., for periodic automation adjustments), best practice
@@ -173,13 +177,44 @@ DEFAULT defaultResult
 
 ### WITH Statement
 
-Assigns constants for use within an expression.
+Assigns constants and functions for use within an expression.
 
 ```
 WITH (a=1, b=2) a+b
 ```
 
+```
+WITH (sum(a,b) = a+b) sum(1,2)
+```
+
 Supports nesting, with inner WITH statements able to shadow outer constants.
+
+In a single WITH statement, all defned constant names and all defined
+function names must be unique respectively. However it's legal to have
+a constant and a function with the same name. Function parameter names
+must also be unique for each function.
+
+### Nested WITH Statement With Lambdas
+
+```
+WITH (a=1,b=2,c(d,e)=d+e)
+  WITH (f(g)=g+1)
+    c(a,b+1)=f(a+b)
+```
+
+- `a` is `1` and `b`is `2`
+- `c` returns sum of its two parameters.
+- `f` returns its one parameter incdeased by one.
+- `c(a,b+1)` = `c(1,2+1)` = `c(1,3)` = `4`
+- `f(a+b)` = `f(1+2)` = `f(3)` = `4`
+- `4 = 4` = `TRUE`
+
+Recursion is not allowed!
+
+```
+# This will cause an error during the execution!!!
+WITH (r(x) = (CASE (x > 0) CHOOSE x + r(x - 1) DEFAULT x)) r(10)
+```
 
 ### Special Functions
 

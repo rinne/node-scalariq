@@ -5,7 +5,16 @@
 
 <assignment_list> ::= <assignment> ( ',' <assignment> )*
 
-<assignment> ::= <identifier> '=' <expression>
+<assignment> ::= <variable_assignment>
+               | <function_assignment>
+
+<variable_assignment> ::= <identifier> '=' <expression>
+
+<function_assignment> ::= <identifier> '(' <identifier_list_opt> ')' '=' <expression>
+
+<identifier_list_opt> ::= <identifier_list> | /* empty */
+
+<identifier_list> ::= <identifier> ( ',' <identifier> )*
 
 <conditional_expression> ::= <logical_or_expression>
                            | <ternary_expression>

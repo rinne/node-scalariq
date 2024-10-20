@@ -135,14 +135,21 @@ class Parser {
 
 	#parseWithConstruct() {
 		this.#expectReserved('WITH');
-		let variables = [];
+		let assignments = [];
 		this.#expectParenthesis('(');
 		if (!this.#currentTokenIsParenthesis(')')) {
 			while (true) {
 				const identifier = this.#expectToken('Identifier');
-				this.#expectOperator('=');
-				const value = this.#parseExpression();
-				variables.push({ name: identifier.text, value });
+				if (this.#currentTokenIsParenthesis('(')) {
+					const parameters = this.#parseIdentifierList()
+					this.#expectOperator('=');
+					const expression = this.#parseExpression();
+					assignments.push({ type: 'function', name: identifier.text, parameters, expression });
+				} else {
+					this.#expectOperator('=');
+					const value = this.#parseExpression();
+					assignments.push({ type: 'variable', name: identifier.text, value });
+				}
 				if (this.#currentTokenIsParenthesis(')')) {
 					break;
 				}
@@ -151,7 +158,7 @@ class Parser {
 		}
 		this.#expectParenthesis(')');
 		const expression = this.#parseExpression();
-		return { type: 'WithExpression', variables, expression };
+		return { type: 'WithExpression', assignments, expression };
 	}
 
 	#parseCaseExpression() {
@@ -316,6 +323,22 @@ class Parser {
 		}
 		this.#expectParenthesis(')');
 		return args;
+	}
+
+	#parseIdentifierList() {
+		let identifiers = [];
+		this.#expectParenthesis('(');
+		if (!this.#currentTokenIsParenthesis(')')) {
+			while (true) {
+				identifiers.push(this.#expectToken('Identifier').text);
+				if (this.#currentTokenIsParenthesis(')')) {
+					break;
+				}
+				this.#expectOperator(',');
+			}
+		}
+		this.#expectParenthesis(')');
+		return identifiers;
 	}
 
 }

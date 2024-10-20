@@ -145,6 +145,9 @@ class Optimizer {
 				}
 			}
 			break;
+		case 'lambda':
+			stats.warnings.push(`Node #${stats.opCount}:lambda 'Lambdas are not checked'`);
+			break;
 		default:
 			for (let a of av) {
 				this.#checkInternal(a, calls, stack, stats);
@@ -163,6 +166,9 @@ class Optimizer {
 			let r = await c.evaluate(exp);
 			return r;
 		} catch (e) {
+		}
+		if (exp?.op === 'lambda') {
+			return exp;
 		}
 		for (let i = 0; i < exp.av.length; i++) {
 			try {
