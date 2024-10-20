@@ -133,6 +133,10 @@ safe and reliable solution for real-time calculations.
     `\t`, `\v`) in string literals are supported.
 - Booleans
   - `TRUE`, `FALSE`.
+  - For logical operations (and, or, not), number and string operands are
+    booleanized as follows:
+    - Non-empty string is TRUE and empty string is FALSE
+    - Non-zero number is TRUE and zero is FALSE
 - NULL
   - A literal `NULL`
   - Return value from a function typically indicating invalid parameters or failed processing
