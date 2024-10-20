@@ -65,9 +65,11 @@ async function test(exp, expectedResult) {
 	await test('test_lookup("something")', 'foo');
 	testLookup.append({ something: null });
 	await test('test_lookup("something totally unset")', null);
-
-
-
 	await test('WITH (a=1) WITH (b=a) WITH (a=b+a) WITH (b=a+b) WITH (a=b+a) WITH (b=a+b) WITH (a=b+a) WITH (b=a+b) WITH (a=b+a) WITH (b=a+b) WITH (a=b+a) a', 89);
+	await test(`
+	(WITH (s(a,b) = (a+b))
+	 (WITH (t() = 10, u(x) = x+1)
+	  s(6,5)=u(t())))
+`, true);
 })();
 
