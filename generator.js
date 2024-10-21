@@ -72,12 +72,10 @@ class Generator {
 				
 			}
 		case 'TernaryConditionExpression':
-			{
-				let av = [ this.#generate(tree.condition, false),
+			return { op: 'condition',
+					 av: [ this.#generate(tree.condition, false),
 						   this.#generate(tree.iftrue, false),
-						   this.#generate(tree.otherwise, false) ];
-				return { op: 'condition', av };
-			}
+						   this.#generate(tree.otherwise, false) ] };
 		case 'CallExpression':
 			{
 				let av = [ tree.callee ];
