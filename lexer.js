@@ -1,7 +1,7 @@
 'use strict';
 
 // Reserved words
-const reserved = [ 'CASE', 'CHOOSE', 'DEFAULT', 'TRUE', 'FALSE', 'NULL', 'WITH', 'ISNULL', 'COALESCE' ];
+const reserved = [ 'CASE', 'CHOOSE', 'DEFAULT', 'TRUE', 'FALSE', 'NULL', 'WITH', 'ISNULL', 'COALESCE', 'TYPEOF' ];
 
 // All operators are single non-alphanumeric characters.
 const operators = [ '|', '&', '!', '+', '-', '*', '/', '%', '<', '≤', '=', '≠', '≥', '>', ',', '?', ':' ];

@@ -99,7 +99,7 @@ class Evaluator {
 				}
 				return v;
 			}
-		case '+':
+		case 'add':
 			{
 				if (av.length < 1) {
 					throw new Error('Invalid expression av');
@@ -120,7 +120,7 @@ class Evaluator {
 				}
 				return v;
 			}
-		case '-':
+		case 'sub':
 			{
 				if (av.length < 2) {
 					throw new Error('Invalid expression av');
@@ -146,7 +146,7 @@ class Evaluator {
 				}
 				return v;
 			}
-		case '*':
+		case 'mul':
 			{
 				if (av.length < 1) {
 					throw new Error('Invalid expression av');
@@ -167,8 +167,8 @@ class Evaluator {
 				}
 				return v;
 			}
-		case '/':
-		case '%':
+		case 'div':
+		case 'mod':
 			{
 				if (av.length != 2) {
 					throw new Error('Invalid expression av');
@@ -187,10 +187,10 @@ class Evaluator {
 				}
 				let v;
 				switch (expression.op) {
-				case '/':
+				case 'div':
 					v = left / right;
 					break;
-				case '%':
+				case 'mod':
 					v = left % right;
 					break;
 				default:
@@ -253,8 +253,8 @@ class Evaluator {
 				}
 				return v;
 			}
-		case '=':
-		case '≠':
+		case 'eq':
+		case 'ne':
 			{
 				if (av.length != 2) {
 					throw new Error('Invalid expression av');
@@ -272,17 +272,17 @@ class Evaluator {
 					throw new Error('Invalid expression operand');
 				}
 				switch (expression.op) {
-				case '=':
+				case 'eq':
 					return (left === right);
-				case '≠':
+				case 'ne':
 					return (left !== right);
 				}
 				throw new Error('Internal error');
 			}
-		case '<':
-		case '≤':
-		case '≥':
-		case '>':
+		case 'lt':
+		case 'le':
+		case 'ge':
+		case 'gt':
 			{
 				if (av.length != 2) {
 					throw new Error('Invalid expression av');
@@ -300,13 +300,13 @@ class Evaluator {
 					throw new Error('Invalid expression operand');
 				}
 				switch (expression.op) {
-				case '<':
+				case 'lt':
 					return (left < right);
-				case '≤':
+				case 'le':
 					return (left <= right);
-				case '≥':
+				case 'ge':
 					return (left >= right);
-				case '>':
+				case 'gt':
 					return (left > right);
 				}
 				throw new Error('Internal error');
@@ -535,6 +535,25 @@ class Evaluator {
 					throw new Error('Invalid expression operand value');
 				}
 				return (v === null);
+			}
+		case 'typeof':
+			{
+				if (av.length != 1) {
+					throw new Error('Invalid expression av');
+				}
+				let v = await this.#evaluateInternal(av[0], stack, stats);
+				if (! this.#validScalar(v)) {
+					throw new Error('Invalid expression operand value');
+				}
+				if (v === null) {
+					return 'null';
+				} else if (this.#validNumber(v)) {
+					return 'number';
+				} else if (this.#validBoolean(v)) {
+					return 'boolean';
+				} else if (this.#validString(v)) {
+					return 'string';
+				}
 			}
 		default:
 			throw new Error(`Invalid expression: op='${expression.op}'`);

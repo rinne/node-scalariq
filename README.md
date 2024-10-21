@@ -232,6 +232,11 @@ Returns the first non-NULL value among the arguments.
 
 Arguments are evaluated only until the first non-NULL argument is reached.
 
+`TYPEOF(value)`
+
+Returns the type of the value as a string (`'number'`, `'string'`,
+`'boolean'`, or `'null'`).
+
 ### Comments
 
 Start with # and continue to the end of the line.

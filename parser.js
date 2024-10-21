@@ -184,15 +184,16 @@ class Parser {
 
 	#parsePseudoFunctionCall() {
 		let token = this.#currentToken();
-		if (token && token.type === 'Reserved' && [ 'COALESCE', 'ISNULL' ].includes(token.text)) {
+		if (token && token.type === 'Reserved' && [ 'COALESCE', 'ISNULL', 'TYPEOF' ].includes(token.text)) {
 			this.#nextToken();
 			let args = this.#parseArgumentList();
 			switch (token.text) {
 			case 'ISNULL':
+			case 'TYPEOF':
 				if (args.length != 1) {
 					throw new Error(`Unexpected number of arguments: ${this.#tokenIdentityString(token)}`);
 				}
-				return { type: 'PseudoCallExpression', callee: 'ISNULL', arguments: args };
+				return { type: 'PseudoCallExpression', callee: token.text, arguments: args };
 			case 'COALESCE':
 				return { type: 'PseudoCallExpression', callee: 'COALESCE', arguments: args };
 			}

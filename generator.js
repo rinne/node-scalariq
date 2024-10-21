@@ -22,9 +22,9 @@ class Generator {
 		case 'UnaryExpression':
 			switch (tree.operator) {
 			case '+':
-				return { op: '+', av: [ 0, this.#generate(tree.operand, false) ] };
+				return { op: 'add', av: [ 0, this.#generate(tree.operand, false) ] };
 			case '-':
-				return { op: '-', av: [ 0, this.#generate(tree.operand, false) ] };
+				return { op: 'sub', av: [ 0, this.#generate(tree.operand, false) ] };
 			case '!':
 				return { op: 'not', av: [ this.#generate(tree.operand, false) ] };
 			default:
@@ -33,32 +33,31 @@ class Generator {
 		case 'BinaryExpression':
 			switch (tree.operator) {
 			case '|':
+				return { op: 'or', av: [ this.#generate(tree.left, false), this.#generate(tree.right, false) ] };
 			case '&':
+				return { op: 'and', av: [ this.#generate(tree.left, false), this.#generate(tree.right, false) ] };
 			case '+':
+				return { op: 'add', av: [ this.#generate(tree.left, false), this.#generate(tree.right, false) ] };
 			case '-':
+				return { op: 'sub', av: [ this.#generate(tree.left, false), this.#generate(tree.right, false) ] };
 			case '*':
+				return { op: 'mul', av: [ this.#generate(tree.left, false), this.#generate(tree.right, false) ] };
 			case '/':
+				return { op: 'div', av: [ this.#generate(tree.left, false), this.#generate(tree.right, false) ] };
 			case '%':
+				return { op: 'mod', av: [ this.#generate(tree.left, false), this.#generate(tree.right, false) ] };
 			case '<':
+				return { op: 'lt', av: [ this.#generate(tree.left, false), this.#generate(tree.right, false) ] };
 			case '≤':
+				return { op: 'le', av: [ this.#generate(tree.left, false), this.#generate(tree.right, false) ] };
 			case '=':
+				return { op: 'eq', av: [ this.#generate(tree.left, false), this.#generate(tree.right, false) ] };
 			case '≠':
+				return { op: 'ne', av: [ this.#generate(tree.left, false), this.#generate(tree.right, false) ] };
 			case '≥':
+				return { op: 'ge', av: [ this.#generate(tree.left, false), this.#generate(tree.right, false) ] };
 			case '>':
-				{
-					let op;
-					switch (tree.operator) {
-					case '&':
-						op = 'and';
-						break;
-					case '|':
-						op = 'or';
-						break;
-					default:
-						op = tree.operator;
-					}
-					return { op, av: [ this.#generate(tree.left, false), this.#generate(tree.right, false) ] };
-				}
+				return { op: 'gt', av: [ this.#generate(tree.left, false), this.#generate(tree.right, false) ] };
 			default:
 				throw new Error(`Unknown binary operator ${tree?.operator ?? ''}`);
 			}
@@ -96,6 +95,8 @@ class Generator {
 				switch (tree.callee) {
 				case 'ISNULL':
 					return { op: 'isnull', av };
+				case 'TYPEOF':
+					return { op: 'typeof', av };
 				case 'COALESCE':
 					return { op: 'coalesce', av };
 				}
