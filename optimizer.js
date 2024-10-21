@@ -65,12 +65,8 @@ class Optimizer {
 					if (! stats.calls.includes(av[0])) {
 						stats.calls.push(av[0]);
 					}
-				} else if ((av[0] === null) || Number.isFinite(av[0]) || (typeof(av[0]) === 'boolean')) {
-					throw new Error(`Invalid node #${stats.opCount}:call 'Non-string call name'`);
 				} else {
-					this.#checkInternal(av[0], calls, stack, stats);
-					stats.warnings.push(`Node #${stats.opCount}:call 'Call name is not a constant and is therefore not checked'`);
-					stats.dynamicCallNames = true;
+					throw new Error(`Invalid node #${stats.opCount}:call 'Non-string call name'`);
 				}
 				for (let a of av.slice(1)) {
 					this.#checkInternal(a, calls, stack, stats);
@@ -90,12 +86,8 @@ class Optimizer {
 							throw new Error(`Invalid node #${stats.opCount}:with 'Duplicate constant name'`);
 						}
 						vars.add(n);
-					} else if ((n === null) || Number.isFinite(n) || (typeof(n) === 'boolean')) {
-						throw new Error(`Invalid node #${stats.opCount}:with 'Non-string constant name'`);
 					} else {
-						this.#checkInternal(n, calls, stack, stats);
-						stats.warnings.push(`Node #${stats.opCount}:with 'Declared constant name is not a constant, which may cause uncaught undefined constants'`);
-						vars.add(null);
+						throw new Error(`Invalid node #${stats.opCount}:with 'Non-string constant name'`);
 					}
 					this.#checkInternal(v, calls, stack, stats);
 				}
@@ -137,11 +129,8 @@ class Optimizer {
 					} else {
 						throw new Error(`Invalid node #${stats.opCount}:lookup 'Unknown constant name "${av[0]}"'`);
 					}
-				} else if ((av[0] === null) || Number.isFinite(av[0]) || (typeof(av[0]) === 'boolean')) {
-					throw new Error(`Invalid node #${stats.opCount}:lookup 'Non-string constant name'`);
 				} else {
-					this.#checkInternal(av[0], calls, stack, stats);
-					stats.warnings.push(`Node #${stats.opCount}:lookup 'Constant name is not a constant and is therefore not checked'`);
+					throw new Error(`Invalid node #${stats.opCount}:lookup 'Non-string constant name'`);
 				}
 			}
 			break;

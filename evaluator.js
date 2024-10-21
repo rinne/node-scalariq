@@ -351,9 +351,9 @@ class Evaluator {
 				if (av.length < 1) {
 					throw new Error('Invalid expression av');
 				}
-				let name = await this.#evaluateInternal(av.shift(), stack, stats);
+				let name = av.shift();
 				if (! this.#validString(name)) {
-					throw new Error('Invalid call name');
+					throw new Error(`Invalid function name in 'call' (string constant required)`);
 				}
 				// First see if we can find a lambda for that name.
 				{
@@ -450,9 +450,9 @@ class Evaluator {
 				if (av.length != 1) {
 					throw new Error('Invalid expression av');
 				}
-				let name = await this.#evaluateInternal(av[0], stack, stats);
+				let name = av[0];
 				if (! this.#validString(name)) {
-					throw new Error('Invalid variable name');
+					throw new Error(`Invalid variable name in 'lookup' (string constant required)`);
 				}
 				for (let i = stack.length - 1; i >= 0; i--) {
 					let v = stack[i].get(name);
@@ -478,9 +478,9 @@ class Evaluator {
 				}
 				let scope = new Map();
 				while (av.length >= 2) {
-					let name = await this.#evaluateInternal(av.shift(), stack, stats);
+					let name = av.shift();
 					if (! this.#validString(name)) {
-						throw new Error('Invalid variable name');
+						throw new Error(`Invalid variable name in 'with' (string constant required)`);
 					}
 					let expression = av.shift();
 					if (expression?.op === 'lambda') {
