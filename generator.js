@@ -143,7 +143,7 @@ class Generator {
 					}
 				}
 				av.push(this.#generate(tree.expression, false));
-				return { op: 'with', av };
+				return { op: 'scope', av };
 			}
 		default:
 			throw new Error(`Unknown construct ${tree?.type ?? ''}`);

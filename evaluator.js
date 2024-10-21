@@ -395,9 +395,9 @@ class Evaluator {
 							// And in the end we have av that has
 							// parameter name - parameter value pairs
 							// and at the end the expression to be
-							// evaluated. From that we'll fabricate a 'with'
+							// evaluated. From that we'll fabricate a 'scope'
 							// expression to be evaluated.
-							let o = { op: 'with', av };
+							let o = { op: 'scope', av };
 							let r, err;
 							try {
 								lambda.busy = true;
@@ -471,7 +471,7 @@ class Evaluator {
 				}
 				throw new Error(`Uninitialized variable '${name}'`);
 			}
-		case 'with':
+		case 'scope':
 			{
 				if (! ((av.length >= 1) && ((av.length % 2) == 1))) {
 					throw new Error('Invalid expression av');
@@ -480,7 +480,7 @@ class Evaluator {
 				while (av.length >= 2) {
 					let name = av.shift();
 					if (! this.#validString(name)) {
-						throw new Error(`Invalid variable name in 'with' (string constant required)`);
+						throw new Error(`Invalid variable name in 'scope' (string constant required)`);
 					}
 					let expression = av.shift();
 					if (expression?.op === 'lambda') {

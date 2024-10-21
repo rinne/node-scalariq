@@ -73,21 +73,21 @@ class Optimizer {
 				}
 			}
 			break;
-		case 'with':
+		case 'scope':
 			{
 				if (! ((av.length >= 1) && ((av.length % 2) == 1))) {
-					throw new Error(`Invalid node #${stats.opCount}:with 'Illegal av length'`);
+					throw new Error(`Invalid node #${stats.opCount}:scope 'Illegal av length'`);
 				}
 				let vars = new Set();
 				for (let i = 0; i < av.length - 1; i += 2) {
 					let n = av[i], v = av[i + 1];
 					if (typeof(n) === 'string') {
 						if (vars.has(n)) {
-							throw new Error(`Invalid node #${stats.opCount}:with 'Duplicate constant name'`);
+							throw new Error(`Invalid node #${stats.opCount}:scope 'Duplicate constant name'`);
 						}
 						vars.add(n);
 					} else {
-						throw new Error(`Invalid node #${stats.opCount}:with 'Non-string constant name'`);
+						throw new Error(`Invalid node #${stats.opCount}:scope 'Non-string constant name'`);
 					}
 					this.#checkInternal(v, calls, stack, stats);
 				}
