@@ -205,7 +205,7 @@ class Parser {
 		let left = this.#parseLogicalAnd();
 		while (this.#currentTokenIsOperator('|')) {
 			const operator = this.#expectOperator('|');
-			const right = this.#parseExpression();
+			const right = this.#parseLogicalAnd();
 			left = { type: 'BinaryExpression', operator: operator.text, left, right };
 		}
 		return left;
@@ -215,7 +215,7 @@ class Parser {
 		let left = this.#parseEquality();
 		while (this.#currentTokenIsOperator('&')) {
 			const operator = this.#expectOperator('&');
-			const right = this.#parseExpression();
+			const right = this.#parseEquality();
 			left = { type: 'BinaryExpression', operator: operator.text, left, right };
 		}
 		return left;
@@ -226,7 +226,7 @@ class Parser {
 		while (this.#currentTokenIsOperator('=') ||
 			   this.#currentTokenIsOperator('≠')) {
 			const operator = this.#expectOperator();
-			const right = this.#parseExpression();
+			const right = this.#parseRelational();
 			left = { type: 'BinaryExpression', operator: operator.text, left, right };
 		}
 		return left;
@@ -239,7 +239,7 @@ class Parser {
 			   this.#currentTokenIsOperator('>') ||
 			   this.#currentTokenIsOperator('≥')) {
 			const operator = this.#expectOperator();
-			const right = this.#parseExpression();
+			const right = this.#parseAdditive();
 			left = { type: 'BinaryExpression', operator: operator.text, left, right };
 		}
 		return left;
@@ -250,7 +250,7 @@ class Parser {
 		while (this.#currentTokenIsOperator('+') ||
 			   this.#currentTokenIsOperator('-')) {
 			const operator = this.#expectOperator();
-			const right = this.#parseExpression();
+			const right = this.#parseMultiplicative();
 			left = { type: 'BinaryExpression', operator: operator.text, left, right };
 		}
 		return left;
@@ -262,7 +262,7 @@ class Parser {
 			   this.#currentTokenIsOperator('/') ||
 			   this.#currentTokenIsOperator('%')) {
 			const operator = this.#expectOperator();
-			const right = this.#parseExpression();
+			const right = this.#parseUnary();
 			left = { type: 'BinaryExpression', operator: operator.text, left, right };
 		}
 		return left;
@@ -273,7 +273,7 @@ class Parser {
 			this.#currentTokenIsOperator('+') ||
 			this.#currentTokenIsOperator('-')) {
 			const operator = this.#expectOperator();
-			const operand = this.#parseExpression();
+			const operand = this.#parseUnary();
 			return { type: 'UnaryExpression', operator: operator.text, operand };
 		}
 		return this.#parsePrimary();
