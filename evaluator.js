@@ -1,6 +1,7 @@
 'use strict';
 
-const LAMBDA_PREFIX = " λ\ufeff";
+const CONSTANT_PREFIX = "C";
+const LAMBDA_PREFIX = "L";
 
 class Evaluator {
 
@@ -459,8 +460,9 @@ class Evaluator {
 				if (! this.#validString(name)) {
 					throw new Error(`Invalid variable name in 'lookup' (string constant required)`);
 				}
+				let key = CONSTANT_PREFIX + name;
 				for (let i = stack.length - 1; i >= 0; i--) {
-					let v = stack[i].get(name);
+					let v = stack[i].get(key);
 					if (v === undefined) {
 						continue;
 					}
@@ -496,7 +498,7 @@ class Evaluator {
 						if (! this.#validScalar(v)) {
 							throw new Error('Invalid expression operand value');
 						}
-						scope.set(name, v);
+						scope.set(CONSTANT_PREFIX + name, v);
 					}
 				}
 				{
