@@ -5,10 +5,12 @@ class Parser {
 	constructor(tokens) {
 		this.#tokens = tokens;
 		this.#pos = 0;
+        this.#posStack = [];
 	}
 
 	#tokens;
 	#pos;
+    #posStack;
 
 	parse() {
 		const expr = this.#parseExpression();
@@ -16,6 +18,24 @@ class Parser {
 			throw new Error(`Unexpected token at end: ${this.#tokenIdentityString(this.#currentToken())}`);
 		}
 		return expr;
+	}
+
+    #posPush() {
+		this.#posStack.push(this.#pos);
+	}
+
+    #posPop() {
+		if (this.#posStack.length < 1) {
+			throw new Error(`Internal error`);
+		}
+		this.#pos = this.#posStack.pop();
+	}
+
+    #posDrop() {
+		if (this.#posStack.length < 1) {
+			throw new Error(`Internal error`);
+		}
+		this.#posStack.pop();
 	}
 
 	#tokenIdentityString(token) {
@@ -108,96 +128,6 @@ class Parser {
 	}
 
 	#parseExpression() {
-		return this.#parseTernaryConditionExpression();
-	}
-
-	#parseTernaryConditionExpression() {
-		let expression1 = this.#parseWithExpression();
-		if (! this.#currentTokenIsOperator('?')) {
-			return expression1;
-		}
-		this.#expectOperator('?');
-		let expression2 = this.#parseExpression();
-		this.#expectOperator(':');
-		let expression3 = this.#parseExpression();
-		return { type: 'TernaryConditionExpression',
-				 condition: expression1,
-				 iftrue: expression2,
-				 otherwise: expression3 };
-	}
-
-	#parseWithExpression() {
-		if (this.#currentTokenIsReserved('WITH')) {
-			return this.#parseWithConstruct();
-		}
-		return this.#parseCaseExpression();
-	}
-
-	#parseWithConstruct() {
-		this.#expectReserved('WITH');
-		let assignments = [];
-		this.#expectParenthesis('(');
-		if (!this.#currentTokenIsParenthesis(')')) {
-			while (true) {
-				const identifier = this.#expectToken('Identifier');
-				if (this.#currentTokenIsParenthesis('(')) {
-					const parameters = this.#parseIdentifierList()
-					this.#expectOperator('=');
-					const expression = this.#parseExpression();
-					assignments.push({ type: 'function', name: identifier.text, parameters, expression });
-				} else {
-					this.#expectOperator('=');
-					const value = this.#parseExpression();
-					assignments.push({ type: 'variable', name: identifier.text, value });
-				}
-				if (this.#currentTokenIsParenthesis(')')) {
-					break;
-				}
-				this.#expectOperator(',');
-			}
-		}
-		this.#expectParenthesis(')');
-		const expression = this.#parseExpression();
-		return { type: 'WithExpression', assignments, expression };
-	}
-
-	#parseCaseExpression() {
-		if (this.#currentTokenIsReserved('CASE') || this.#currentTokenIsReserved('DEFAULT')) {
-			return this.#parseCaseConstruct();
-		}
-		return this.#parsePseudoFunctionCall();
-	}
-
-	#parseCaseConstruct() {
-		let cases = [];
-		while (this.#currentTokenIsReserved('CASE')) {
-			this.#expectReserved('CASE');
-			const condition = this.#parseExpression();
-			this.#expectReserved('CHOOSE');
-			const value = this.#parseExpression();
-			cases.push({ condition, value });
-		}
-		this.#expectReserved('DEFAULT');
-		const defaultExpr = this.#parseExpression();
-		return { type: 'CaseExpression', cases, defaultExpr: defaultExpr };
-	}
-
-	#parsePseudoFunctionCall() {
-		let token = this.#currentToken();
-		if (token && token.type === 'Reserved' && [ 'COALESCE', 'ISNULL', 'TYPEOF' ].includes(token.text)) {
-			this.#nextToken();
-			let args = this.#parseArgumentList();
-			switch (token.text) {
-			case 'ISNULL':
-			case 'TYPEOF':
-				if (args.length != 1) {
-					throw new Error(`Unexpected number of arguments: ${this.#tokenIdentityString(token)}`);
-				}
-				return { type: 'PseudoCallExpression', callee: token.text, arguments: args };
-			case 'COALESCE':
-				return { type: 'PseudoCallExpression', callee: 'COALESCE', arguments: args };
-			}
-		}
 		return this.#parseLogicalOr();
 	}
 
@@ -212,13 +142,38 @@ class Parser {
 	}
 
 	#parseLogicalAnd() {
-		let left = this.#parseEquality();
+		let left = this.#parseTernaryConditionExpression();
 		while (this.#currentTokenIsOperator('&')) {
 			const operator = this.#expectOperator('&');
 			const right = this.#parseEquality();
 			left = { type: 'BinaryExpression', operator: operator.text, left, right };
 		}
 		return left;
+	}
+
+	#parseTernaryConditionExpression() {
+		let expression1 = this.#parseEquality();
+		if (! this.#currentTokenIsOperator('?')) {
+			return expression1;
+		}
+		this.#expectOperator('?');
+		this.#posPush()
+		let expression2 = this.#parseTernaryConditionExpression();
+		if (this.#currentTokenIsOperator('&')) {
+			this.#posPop();
+			expression2 = this.#parseLogicalAnd();
+		} else if (this.#currentTokenIsOperator('|')) {
+			this.#posPop();
+			expression2 = this.#parseLogicalOr();
+		} else {
+			this.#posDrop();
+		}
+		this.#expectOperator(':');
+		let expression3 = this.#parseTernaryConditionExpression();
+		return { type: 'TernaryConditionExpression',
+				 condition: expression1,
+				 iftrue: expression2,
+				 otherwise: expression3 };
 	}
 
 	#parseEquality() {
@@ -287,6 +242,18 @@ class Parser {
 		if (token.type === 'Literal') {
 			this.#nextToken();
 			return { type: 'Literal', value: token.value, raw: token.text };
+		} else if (token.type === 'Reserved') {
+			switch (token.text) {
+			case 'COALESCE':
+			case 'ISNULL':
+			case 'TYPEOF':
+				return this.#parsePseudoFunctionCall();
+			case 'CASE':
+			case 'DEFAULT':
+				return this.#parseCaseConstruct();
+			case 'WITH':
+				return this.#parseWithConstruct();
+			}
 		} else if (token.type === 'Identifier') {
 			return this.#parseFunctionCallOrVariableLookup();
 		} else if (token.type === 'Parenthesis' && token.text === '(') {
@@ -294,6 +261,25 @@ class Parser {
 			const expr = this.#parseExpression();
 			this.#expectParenthesis(')');
 			return expr;
+		}
+		throw new Error(`Unexpected token: ${this.#tokenIdentityString(this.#currentToken())}`);
+	}
+
+	#parsePseudoFunctionCall() {
+		let token = this.#currentToken();
+		if (token && token.type === 'Reserved' && [ 'COALESCE', 'ISNULL', 'TYPEOF' ].includes(token.text)) {
+			this.#nextToken();
+			let args = this.#parseArgumentList();
+			switch (token.text) {
+			case 'ISNULL':
+			case 'TYPEOF':
+				if (args.length != 1) {
+					throw new Error(`Unexpected number of arguments: ${this.#tokenIdentityString(token)}`);
+				}
+				return { type: 'PseudoCallExpression', callee: token.text, arguments: args };
+			case 'COALESCE':
+				return { type: 'PseudoCallExpression', callee: 'COALESCE', arguments: args };
+			}
 		}
 		throw new Error(`Unexpected token: ${this.#tokenIdentityString(this.#currentToken())}`);
 	}
@@ -340,6 +326,48 @@ class Parser {
 		}
 		this.#expectParenthesis(')');
 		return identifiers;
+	}
+
+	#parseWithConstruct() {
+		this.#expectReserved('WITH');
+		let assignments = [];
+		this.#expectParenthesis('(');
+		if (!this.#currentTokenIsParenthesis(')')) {
+			while (true) {
+				const identifier = this.#expectToken('Identifier');
+				if (this.#currentTokenIsParenthesis('(')) {
+					const parameters = this.#parseIdentifierList()
+					this.#expectOperator('=');
+					const expression = this.#parseExpression();
+					assignments.push({ type: 'function', name: identifier.text, parameters, expression });
+				} else {
+					this.#expectOperator('=');
+					const value = this.#parseExpression();
+					assignments.push({ type: 'variable', name: identifier.text, value });
+				}
+				if (this.#currentTokenIsParenthesis(')')) {
+					break;
+				}
+				this.#expectOperator(',');
+			}
+		}
+		this.#expectParenthesis(')');
+		const expression = this.#parseExpression();
+		return { type: 'WithExpression', assignments, expression };
+	}
+
+	#parseCaseConstruct() {
+		let cases = [];
+		while (this.#currentTokenIsReserved('CASE')) {
+			this.#expectReserved('CASE');
+			const condition = this.#parseExpression();
+			this.#expectReserved('CHOOSE');
+			const value = this.#parseExpression();
+			cases.push({ condition, value });
+		}
+		this.#expectReserved('DEFAULT');
+		const defaultExpr = this.#parseExpression();
+		return { type: 'CaseExpression', cases, defaultExpr: defaultExpr };
 	}
 
 }
