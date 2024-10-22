@@ -66,15 +66,24 @@ function mathExec2(name, av) {
 	}
 }
 
+function sum(...av) {
+	av = av.filter((x) => (x !== null));
+	if ((av.length < 1) || (av.findIndex((x) => (! Number.isFinite(x))) >= 0)) {
+		return null;
+	}
+	let r = av.reduce((a,x)=>(a+x),0);
+	if (! Number.isFinite(r)) {
+		return Number.isFinite(r) ? r : null;
+	}
+	return r;
+}
+
 function average(...av) {
 	av = av.filter((x) => (x !== null));
 	if ((av.length < 1) || (av.findIndex((x) => (! Number.isFinite(x))) >= 0)) {
 		return null;
 	}
-	let r = 0;
-	for (let a of av) {
-		r += a / av.length;
-	}
+	let r = av.reduce((a,x)=>(a+(x/av.length)),0);
 	if (! Number.isFinite(r)) {
 		return Number.isFinite(r) ? r : null;
 	}
@@ -86,6 +95,7 @@ function average(...av) {
 		average: average,
 		constant: constant,
 		random: random,
+		sum: sum,
 		abs: (...av) => mathExec1('abs', av),
 		acos: (...av) => mathExec1('acos', av),
 		acosh: (...av) => mathExec1('acosh', av),
