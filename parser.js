@@ -13,11 +13,11 @@ class Parser {
     #posStack;
 
 	parse() {
-		const expr = this.#parseExpression();
-		if (this.#currentToken() != null) {
+		const expression = this.#parseExpression();
+		if (this.#currentToken()) {
 			throw new Error(`Unexpected token at end: ${this.#tokenIdentityString(this.#currentToken())}`);
 		}
-		return expr;
+		return expression;
 	}
 
     #posPush() {
@@ -128,7 +128,17 @@ class Parser {
 	}
 
 	#parseExpression() {
-		return this.#parseLogicalOr();
+		let expression = this.#parseLogicalOr();
+		if (this.#currentToken() && this.#currentTokenIsOperator('?')) {
+			let expression2 = this.#parseTernaryConditionTrueExpression();
+			this.#expectOperator(':');
+			let expression3 = this.#parseExpression();
+			return { type: 'TernaryConditionExpression',
+					 condition: expression,
+					 iftrue: expression2,
+					 otherwise: expression3 };
+		}
+		return expression;
 	}
 
 	#parseLogicalOr() {
@@ -156,26 +166,36 @@ class Parser {
 		if (! this.#currentTokenIsOperator('?')) {
 			return expression1;
 		}
-		this.#expectOperator('?');
-		this.#posPush()
-		let expression2 = this.#parseTernaryConditionExpression();
-		if (this.#currentTokenIsOperator('&')) {
-			this.#posPop();
-			expression2 = this.#parseLogicalAnd();
-		} else if (this.#currentTokenIsOperator('|')) {
-			this.#posPop();
-			expression2 = this.#parseLogicalOr();
-		} else {
-			this.#posDrop();
-		}
-		this.#expectOperator(':');
-		let expression3 = this.#parseTernaryConditionExpression();
+		let expression2 = this.#parseTernaryConditionTrueExpression();
+		let expression3 = this.#parseTernaryConditionFalseExpression();
 		return { type: 'TernaryConditionExpression',
 				 condition: expression1,
 				 iftrue: expression2,
 				 otherwise: expression3 };
 	}
 
+	#parseTernaryConditionTrueExpression() {
+		this.#expectOperator('?');
+		this.#posPush()
+		let expression = this.#parseTernaryConditionExpression();
+		if (this.#currentTokenIsOperator('&')) {
+			this.#posPop();
+			expression = this.#parseLogicalAnd();
+		} else if (this.#currentTokenIsOperator('|')) {
+			this.#posPop();
+			expression = this.#parseLogicalOr();
+		} else {
+			this.#posDrop();
+		}
+		return expression;
+	}
+
+	#parseTernaryConditionFalseExpression() {
+		this.#expectOperator(':');
+		let expression = this.#parseTernaryConditionExpression();
+		return expression;
+	}
+	
 	#parseEquality() {
 		let left = this.#parseRelational();
 		while (this.#currentTokenIsOperator('=') ||
@@ -236,7 +256,7 @@ class Parser {
 
 	#parsePrimary() {
 		const token = this.#currentToken();
-		if (token == null) {
+		if (! token) {
 			throw new Error(`Unexpected end of input`);
 		}
 		if (token.type === 'Literal') {

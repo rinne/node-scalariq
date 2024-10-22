@@ -146,14 +146,12 @@ class Optimizer {
 			let r = await c.evaluate(exp);
 			return r;
 		} catch (e) {
-			console.log(e);
 		}
 		for (let i = 0; i < exp.av.length; i++) {
 			try {
 				let r = await this.#optimizeInternal(exp.av[i]);
 				exp.av[i] = r;
 			} catch (e) {
-				console.log(e);
 			}
 		}
 		return exp;
