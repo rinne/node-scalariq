@@ -58,11 +58,29 @@ async function commandLineOptsParse() {
 					  description: 'Enable standard type functions for evaluator' },
 					{ longName: 'disable-limits',
 					  description: 'Disable evaluator safety limits',
-					  conflictsWith: [ 'limit-ops', 'limit-strings', 'limit-string-chars' ] },
+					  conflictsWith: [ 'limit-ops', 'limit-scopes', 'limit-scope-depth', 'limit-variables', 'limit-strings', 'limit-string-chars' ] },
 					{ longName: 'limit-ops',
 					  description: 'Maximum number of operations for evaluator',
 					  hasArg: true,
 					  defaultValue: '1000',
+					  optArgCb: ou.integerWithLimitsCbFactory(0,9999999),
+					  conflictsWith: [ 'disable-limits' ] },
+					{ longName: 'limit-scopes',
+					  description: 'Maximum number of scopes for evaluator',
+					  hasArg: true,
+					  defaultValue: '200',
+					  optArgCb: ou.integerWithLimitsCbFactory(0,9999999),
+					  conflictsWith: [ 'disable-limits' ] },
+					{ longName: 'limit-scope-depth',
+					  description: 'Maximum scope depth for evaluator',
+					  hasArg: true,
+					  defaultValue: '100',
+					  optArgCb: ou.integerWithLimitsCbFactory(0,9999999),
+					  conflictsWith: [ 'disable-limits' ] },
+					{ longName: 'limit-variables',
+					  description: 'Maximum number of variables for evaluator',
+					  hasArg: true,
+					  defaultValue: '200',
 					  optArgCb: ou.integerWithLimitsCbFactory(0,9999999),
 					  conflictsWith: [ 'disable-limits' ] },
 					{ longName: 'limit-strings',
@@ -145,14 +163,14 @@ function out(x) {
 		}
 		let g = new Generator(tree);
 		let expr = g.generate();
-		if (opt.value('generate')) {
-			out(expr);
-			process.exit(0);
-		}
 		if (opt.value('optimize')) {
 			let o = new Optimizer(expr);
 			let oexpr = await o.optimize();
 			expr = oexpr;
+		}
+		if (opt.value('generate')) {
+			out(expr);
+			process.exit(0);
 		}
 		if (opt.value('check')) {
 			let o = new Optimizer(expr);
@@ -166,21 +184,25 @@ function out(x) {
 								  opt.value('enable-time') ? TimeCalls : {},
 								  opt.value('enable-type') ? TypeCalls : {});
 		let limits = (opt.value('disable-limits') ?
-					  { opCount: 0,
-						strCount: 0,
-						strChars: 0 } :
+					  null :
 					  { opCount: opt.value('limit-ops'), 
+						scopeCount: opt.value('limit-scopes'), 
+						scopeDepth: opt.value('limit-scope-depth'),
+						varCount: opt.value('limit-variables'),
 						strCount: opt.value('limit-strings'),
 						strChars: opt.value('limit-string-chars') });
 		let c = new Evaluator(expr, { calls, limits } );
-		let result = await c.evaluate();
+		let rv = await c.evaluateWithStats();
 		if (opt.value('no-output')) {
 			process.exit(0);
 		}
+		if (opt.value('debug')) {
+			console.log(YAML.stringify({ debug: rv }));
+		}
 		if (opt.value('json') || opt.value('yaml')) {
-			out(result);
+			out(rv.result);
 		} else {
-			console.log((result === null) ? 'null' : result.toString());
+			console.log((rv.result === null) ? 'null' : rv.result.toString());
 		}
 		process.exit(0);
 	} catch (e) {

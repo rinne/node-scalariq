@@ -1,15 +1,16 @@
 'use strict';
 
-const CONSTANT_PREFIX = "C";
-const LAMBDA_PREFIX = "L";
-
 class Evaluator {
 
     constructor(expression, config) {
-		let c = { limits: { opCount: 1000, strCount: null, strChars: 100000 },
+		let c = { limits: { opCount: 1000, scopeCount: 200, scopeDepth: 100, varCount: 200, strCount: null, strChars: 10000 },
 				  calls: new Map() };
-		for (let k of [ 'opCount', 'strCount', 'strChars' ]) {
-			if (config?.limits?.[k] !== undefined) {
+		for (let k of [ 'opCount', 'scopeCount', 'scopeDepth', 'varCount', 'strCount', 'strChars' ]) {
+			if (config?.limits === null) {
+				c.limits[k] = 0;
+			} else if (Number.isSafeInteger(config?.limits) && (config.limits >= 0)) {
+				c.limits[k] = config.limits;
+			} else if (config?.limits?.[k] !== undefined) {
 				let n = config.limits[k];
 				if ((n === null) || (Number.isSafeInteger(n) && (n >= 0))) {
 					c.limits[k] = n;
@@ -40,15 +41,20 @@ class Evaluator {
 	#expression;
 	#config;
 
-
 	async evaluate() {
-		let stats = { opCount: 0, strCount: 0, strChars: 0 };
+		let r = await this.evaluateWithStats();
+		return r.result;
+	}
+
+	async evaluateWithStats() {
+		let stats = { opCount: 0, scopeCount: 0, scopeDepth: 0, scopeDepthMax: 0, varCount: 0, strCount: 0, strChars: 0 };
 		let r = await this.#evaluateInternal(this.#expression, [], stats);
-		return r;
+		delete stats.scopeDepth;
+		return { result: r, stats };
 	}
 
 	#checkStatLimits(stats) {
-		for (let p of [ 'opCount', 'strCount', 'strChars' ]) {
+		for (let p of [ 'opCount', 'scopeCount', 'scopeDepth', 'varCount', 'strCount', 'strChars' ]) {
 			let l = this.#config.limits[p];
 			let v = stats?.[p];
 			if (! Number.isSafeInteger(v)) {
@@ -361,70 +367,6 @@ class Evaluator {
 				if (! this.#validString(name)) {
 					throw new Error(`Invalid function name in 'call' (string constant required)`);
 				}
-				// First see if we can find a lambda for that name.
-				{
-					let key = LAMBDA_PREFIX + name;
-					for (let i = stack.length - 1; i >= 0; i--) {
-						let lambda = stack[i].get(key);
-						if (lambda === undefined) {
-							continue;
-						}
-						// Removing this check would enable
-						// recursion. Programs would still work, but
-						// the finite execution time would no longer
-						// be guaranteed. It would also make the
-						// language Turing complete, which is against
-						// the core idea of the language. If you
-						// change this, be sure to call the resulting
-						// language something different from ScalarIQ!
-						if (lambda.busy) {
-							throw new Error(`Lambda '${name}' is busy (attempted recursion?)`);
-						}
-						// Both includes one non-parameter, but the length should match.
-						if (expression.av.length !== lambda?.expression?.av.length) {
-							throw new Error(`Lambda '${name}' parameter count mismatch`);
-						}
-						{
-							// I agree that this loop is a bit weird,
-							// so I'll document it :).
-							let av = [];
-							// Push the first parameter name or
-							// expression if there are no parameters.
-							av.push(lambda.expression.av[0]);
-							for (let i = 1; i < expression.av.length; i++) {
-								// Push the value of the last pushed
-								// parameter name and name of the next
-								// parameter or expression if there
-								// are no more parameters.
-								av.push(expression.av[i], lambda.expression.av[i]);
-							}
-							// And in the end we have av that has
-							// parameter name - parameter value pairs
-							// and at the end the expression to be
-							// evaluated. From that we'll fabricate a 'scope'
-							// expression to be evaluated.
-							let o = { op: 'scope', av };
-							let r, err;
-							try {
-								lambda.busy = true;
-								r = await this.#evaluateInternal(o, stack, stats);
-								if (! this.#validScalar(r)) {
-									throw new Error(`Invalid lambda call '${name}' return value`);
-								}
-							} catch (e) {
-								err = e;
-								r = undefined;
-							} finally {
-								lambda.busy = false;
-							}
-							if (err) {
-								throw err;
-							}
-							return r;
-						}
-					}
-				}
-				// Then we'll look into externally provided functions.
 				let cb = this.#config.calls.get(name);
 				if (cb === undefined) {
 					throw new Error(`Undefined expression call '${name}'`);
@@ -460,9 +402,8 @@ class Evaluator {
 				if (! this.#validString(name)) {
 					throw new Error(`Invalid variable name in 'lookup' (string constant required)`);
 				}
-				let key = CONSTANT_PREFIX + name;
 				for (let i = stack.length - 1; i >= 0; i--) {
-					let v = stack[i].get(key);
+					let v = stack[i].get(name);
 					if (v === undefined) {
 						continue;
 					}
@@ -490,21 +431,27 @@ class Evaluator {
 						throw new Error(`Invalid variable name in 'scope' (string constant required)`);
 					}
 					let expression = av.shift();
-					if (expression?.op === 'lambda') {
-						let lambda = { busy: false, expression };
-						scope.set(LAMBDA_PREFIX + name, lambda);
-					} else {
-						let v = await this.#evaluateInternal(expression, stack, stats);
-						if (! this.#validScalar(v)) {
-							throw new Error('Invalid expression operand value');
-						}
-						scope.set(CONSTANT_PREFIX + name, v);
+					stats.varCount++;
+					let v = await this.#evaluateInternal(expression, stack, stats);
+					if (! this.#validScalar(v)) {
+						throw new Error('Invalid expression operand value');
 					}
+					scope.set(name, v);
+				}
+				if (scope.size == 0) {
+					scope = null;
 				}
 				{
 					let v, error;
 					try {
-						stack.push(scope);
+						stats.scopeCount++;
+						stats.scopeDepth++;
+						if (stats.scopeDepth > stats.scopeDepthMax) {
+							stats.scopeDepthMax = stats.scopeDepth;
+						}
+						if (scope) {
+							stack.push(scope);
+						}
 						v = await this.#evaluateInternal(av.shift(), stack, stats);
 						if (! this.#validScalar(v)) {
 							throw new Error('Invalid expression operand value');
@@ -513,7 +460,10 @@ class Evaluator {
 						error = e;
 						v = undefined;
 					} finally {
-						stack.pop();
+						if (scope) {
+							stack.pop();
+						}
+						stats.scopeDepth--;
 					}
 					if (error) {
 						throw error;
@@ -562,8 +512,6 @@ class Evaluator {
 					return 'string';
 				}
 			}
-		case 'lambda':
-			throw new Error('Unexpected lambda expression');
 		default:
 			throw new Error(`Invalid expression: op='${expression.op}'`);
 		}
