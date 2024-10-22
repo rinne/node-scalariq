@@ -1,5 +1,8 @@
 'use strict';
 
+const CONSTANT_PREFIX = "C";
+const LAMBDA_PREFIX = "L";
+
 class Optimizer {
 
     constructor(expression) {
@@ -59,11 +62,21 @@ class Optimizer {
 					throw new Error(`Invalid node #${stats.opCount}:call 'Empty av'`);
 				}
 				if (typeof(av[0]) === 'string') {
-					if (Array.isArray(calls) && (! calls.includes(av[0]))) {
-						throw new Error(`Invalid node #${stats.opCount}:lookup 'Unknown call name "${av[0]}"'`);
+					let matchFound = false;
+					let key = LAMBDA_PREFIX + av[0];
+					for (let i = stack.length - 1; i >= 0; i--) {
+						if (stack[i].has(key)) {
+							matchFound = true;
+							break;
+						}
 					}
-					if (! stats.calls.includes(av[0])) {
-						stats.calls.push(av[0]);
+					if (! matchFound) {
+						if (Array.isArray(calls) && (! calls.includes(av[0]))) {
+							throw new Error(`Invalid node #${stats.opCount}:lookup 'Unknown call name "${av[0]}"'`);
+						}
+						if (! stats.calls.includes(av[0])) {
+							stats.calls.push(av[0]);
+						}
 					}
 				} else {
 					throw new Error(`Invalid node #${stats.opCount}:call 'Non-string call name'`);
@@ -82,10 +95,11 @@ class Optimizer {
 				for (let i = 0; i < av.length - 1; i += 2) {
 					let n = av[i], v = av[i + 1];
 					if (typeof(n) === 'string') {
-						if (vars.has(n)) {
+						let key = ((v?.op === 'lambda') ? LAMBDA_PREFIX : CONSTANT_PREFIX) + n;
+						if (vars.has(key)) {
 							throw new Error(`Invalid node #${stats.opCount}:scope 'Duplicate constant name'`);
 						}
-						vars.add(n);
+						vars.add(key);
 					} else {
 						throw new Error(`Invalid node #${stats.opCount}:scope 'Non-string constant name'`);
 					}
@@ -111,22 +125,15 @@ class Optimizer {
 			}
 			{
 				if (typeof(av[0]) === 'string') {
-					let matchFound = false, dynamicFound = false;
+					let matchFound = false;
+					let key = CONSTANT_PREFIX + av[0];
 					for (let i = stack.length - 1; i >= 0; i--) {
-						if (stack[i].has(av[0])) {
+						if (stack[i].has(key)) {
 							matchFound = true;
 							break;
 						}
-						if (stack[i].has(null)) {
-							dynamicFound = true;
-							break;
-						}
 					}
-					if (matchFound) {
-						// We are happy
-					} else if (dynamicFound) {
-						stats.warnings.push(`Node #${stats.opCount}:lookup 'Unknown constant name "${av[0]}" but enclosing scope includes dynamic constant names that possibly will satisfy it during evaluation'`);
-					} else {
+					if (! matchFound) {
 						throw new Error(`Invalid node #${stats.opCount}:lookup 'Unknown constant name "${av[0]}"'`);
 					}
 				} else {
@@ -135,7 +142,36 @@ class Optimizer {
 			}
 			break;
 		case 'lambda':
-			stats.warnings.push(`Node #${stats.opCount}:lambda 'Lambdas are not checked'`);
+			if (! (av.length >= 1)) {
+				throw new Error(`Invalid node #${stats.opCount}:lambda 'Illegal av length'`);
+			}
+			{
+				let params = new Set();
+				for (let i = 0; i < av.length - 1; i++) {
+					let n = av[i];
+					if (typeof(n) === 'string') {
+						let key = CONSTANT_PREFIX + n;
+						if (params.has(key)) {
+							throw new Error(`Invalid node #${stats.opCount}:lambda 'Duplicate parameter name'`);
+						}
+						params.add(key);
+					} else {
+						throw new Error(`Invalid node #${stats.opCount}:lambda 'Non-string parameter name'`);
+					}
+				}
+				let err;
+				try {
+					stack.push(params);
+					this.#checkInternal(av.slice(-1)[0], calls, stack, stats);
+				} catch (e) {
+					err = e;
+				} finally {
+					stack.pop(params);
+				}
+				if (err) {
+					throw err;
+				}
+			}
 			break;
 		default:
 			for (let a of av) {
