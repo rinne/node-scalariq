@@ -154,6 +154,41 @@ class Optimizer {
 			} catch (e) {
 			}
 		}
+		switch (exp?.op) {
+		case 'scope':
+			if (exp.av.length == 1) {
+				exp = exp.av[0];
+			}
+			break;
+		case 'condition':
+			{
+				let ready = false;
+				let av = [];
+				for (let i = 0; i < exp.av.length - 1; i += 2) {
+					let c = exp.av[i];
+					console.log('>>>', c);
+					if (c === false) {
+						continue;
+					}
+					let v = exp.av[i + 1];
+					if (c === true) {
+						exp = v;
+						ready = true;
+						break;
+					}
+					av.push(c, v);
+				}
+				if (! ready) {
+					if (av.length == 0) {
+						exp = exp.av[exp.av.length - 1];
+					} else {
+						av.push(exp.av[exp.av.length - 1]);
+						exp = { op: 'condition', av };
+					}
+				}
+			}
+			break;
+		}
 		return exp;
 	}
 
