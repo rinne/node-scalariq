@@ -562,6 +562,8 @@ class Evaluator {
 					return 'string';
 				}
 			}
+		case 'lambda':
+			throw new Error('Unexpected lambda expression');
 		default:
 			throw new Error(`Invalid expression: op='${expression.op}'`);
 		}
