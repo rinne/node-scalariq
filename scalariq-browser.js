@@ -67,9 +67,9 @@ async function optimize(expression) {
 }
 
 function registerCustomLookupFunction(name, title, lookupCb) {
-	let f = (async function() {
+	let f = (async function(...av) {
 		try {
-			let x = await lookupCb();
+			let x = await lookupCb(...av);
 			if (! ((x === null) || Number.isFinite(x) || (typeof(x) === 'string') || (typeof(x) === 'boolean'))) {
 				throw new Error(`Custom lookup function '${name}' returns non-scalar value`);
 			}
