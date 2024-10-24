@@ -59,6 +59,14 @@ Timo J. Rinne <tri@iki.fi>
     FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 
+### Name
+
+    While ScalarIQ language specification is licensed under
+    the GNU Free Documentation License. However, only derivative
+    works that fully comply with the original language specification
+    as published by the original author may be referred to as
+    "ScalarIQ."
+
 ## Rationale
 
 In various applications, especially in automation and data processing,
