@@ -1,7 +1,7 @@
 'use strict';
 
 const ops = [
-    'null', 'expression', 'add', 'sub', 'mul', 'div', 'mod', 'not', 'or',
+    'expression', 'add', 'sub', 'mul', 'div', 'mod', 'not', 'or',
     'and', 'eq', 'ne', 'lt', 'le', 'ge', 'gt', 'condition', 'call',
     'lookup', 'scope', 'coalesce', 'isnull', 'typeof' ];
 
