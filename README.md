@@ -110,6 +110,10 @@ safe and reliable solution for real-time calculations.
     (e.g., for periodic automation adjustments), best practice
     involves compiling the expression client-side and transmitting
     the serialized tree via API to the server.
+- As any sharp sharp-minded reader already noticed, any expression
+  that does not retrieve data with external functions always reduces
+  to the same scalar and can therefore be optimized into one constant
+  operation.
 
 ## Language Features
 
