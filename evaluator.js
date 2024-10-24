@@ -403,7 +403,11 @@ class Evaluator {
 						continue;
 					}
 					if (! this.#validScalar(v)) {
-						throw new Error('Invalid variable value');
+						v = await this.#evaluateInternal(v, stack.slice(0, i), stats);
+						if (! this.#validScalar(v)) {
+							throw new Error('Invalid variable value');
+						}
+						stack[i].set(name, v);
 					}
 					if (this.#validString(v)) {
 						stats.strCount++;
@@ -427,11 +431,7 @@ class Evaluator {
 					}
 					let expression = av.shift();
 					stats.varCount++;
-					let v = await this.#evaluateInternal(expression, stack, stats);
-					if (! this.#validScalar(v)) {
-						throw new Error('Invalid expression operand value');
-					}
-					scope.set(name, v);
+					scope.set(name,  expression);
 				}
 				if (scope.size == 0) {
 					scope = null;
