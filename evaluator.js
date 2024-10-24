@@ -95,11 +95,6 @@ class Evaluator {
 			throw new Error('Invalid expression av');
 		}
 		switch (expression.op) {
-		case 'null':
-			if (av.length != 0) {
-				throw new Error('Invalid expression av');
-			}
-			return null;
 		case 'expression':
 			{
 				if (av.length != 1) {
