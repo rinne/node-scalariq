@@ -1,9 +1,5 @@
 # ScalarIQ -- A Portable Scalar Expression Language
 
-## CAUTION!!!
-
-This is work in progress.
-
 ## In a Nutshell
 
 *ScalarIQ* is a lightweight, portable scalar expression language designed
