@@ -1,9 +1,10 @@
 {
 	"name": "scalariq",
-	"version": "0.8.0",
+	"version": "0.8.1",
 	"description": "Simple Expression Language",
 	"main": "index.js",
 	"dependencies": {
+		"linearize": "^0.1.0",
 		"optist": "^2.0.1",
 		"yaml": "^2.6.0"
 	},
@@ -23,7 +24,7 @@
 		"evaluation",
 		"parser",
 		"language",
-        "automation",
+		"automation",
 		"real-time"
 	],
 	"author": {
