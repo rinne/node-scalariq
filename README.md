@@ -1,4 +1,4 @@
-# ScalarIQ -- A Portable Scalar Expression Language
+# ScalarIQ – A Portable Scalar Expression Language
 
 ## In a Nutshell
 
