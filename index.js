@@ -1,16 +1,13 @@
 'use strict';
 
-const Lexer = require('./lexer');
-const Parser = require('./parser');
-const Generator = require('./generator');
-const Evaluator = require('./evaluator');
 const compiler = require('./compiler');
 
 module.exports = {
-	Lexer,
-	Parser,
-	Generator,
-	Evaluator,
+	Lexer: require('./lexer'),
+	Parser: require('./parser'),
+	Generator: require('./generator'),
+	Optimizer: require('./optimizer'),
+	Evaluator: require('./evaluator'),
 	compileString: compiler.compileString,
 	compileFile: compiler.compileFile,
 	compileReadableStream: compiler.compileReadableStream
