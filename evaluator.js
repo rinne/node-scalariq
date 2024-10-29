@@ -29,7 +29,6 @@ class Evaluator {
 
 	async evaluate(context) {
 		let r = await this.evaluateWithContext(context);
-		console.log(r);
 		return r.result;
 	}
 
