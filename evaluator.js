@@ -20,6 +20,19 @@ class Evaluator {
 			}
 		}
 		c.calls = this.#processCalls(config?.calls);
+		if (Array.isArray(expression)) {
+			if (! Evaluator.Linearizer) {
+				if (typeof(Linearizer) === 'function') {
+					Evaluator.Linearizer = Linearizer;
+				} else {
+					Evaluator.Linearizer = require('./linearizer');
+				}
+			}
+			expression = (new Evaluator.Linearizer(expression)).explode();
+		}
+		if (! (this.#validScalar(expression) || ((typeof(expression?.op) === 'string') && (Array.isArray(expression?.av))))) {
+			throw new Error('Expression fails the pre-check');
+		}
 		this.#expression = expression;
 		this.#config = c;
 	}

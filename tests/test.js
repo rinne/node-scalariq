@@ -1,6 +1,8 @@
 'use strict';
 
-const { Lexer, Parser, Generator, Evaluator } = require('../index');
+const { Lexer, Parser, Generator, Evaluator, Linearizer, compileString } = require('../index');
+
+const lin = require('linearize');
 
 const Lookup = require('../lookup');
 
@@ -41,6 +43,13 @@ async function test(exp, expectedResult, bigLimits) {
 		let result = await c.evaluate();
 		if (result !== expectedResult) {
 			throw new Error(`Unexpected result ${result}, when expecting ${expectedResult}.`);
+		}
+		let f = new Linearizer(expr);
+		let lexpr = lin.enc(f.implode());
+		let d = new Evaluator(lin.dec(lexpr), { calls, limits } );
+		let lresult = await d.evaluate();
+		if (lresult !== expectedResult) {
+			throw new Error(`Unexpected result ${lresult}, when expecting ${expectedResult} from linearized expression.`);
 		}
 	} catch (e) {
 		throw e;

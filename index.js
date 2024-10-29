@@ -8,6 +8,7 @@ module.exports = {
 	Generator: require('./generator'),
 	Optimizer: require('./optimizer'),
 	Evaluator: require('./evaluator'),
+	Linearizer: require('./linearizer'),
 	compileString: compiler.compileString,
 	compileFile: compiler.compileFile,
 	compileReadableStream: compiler.compileReadableStream
