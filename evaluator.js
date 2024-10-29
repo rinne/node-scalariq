@@ -4,7 +4,7 @@ class Evaluator {
 
     constructor(expression, config) {
 		let c = { limits: { opCount: 1000, scopeCount: 200, scopeDepth: 100, varCount: 200, strCount: null, strChars: 10000 },
-				  calls: new Map() };
+				  calls: null };
 		for (let k of [ 'opCount', 'scopeCount', 'scopeDepth', 'varCount', 'strCount', 'strChars' ]) {
 			if (config?.limits === null) {
 				c.limits[k] = 0;
@@ -19,21 +19,7 @@ class Evaluator {
 				}
 			}
 		}
-		if ((config?.calls !== undefined) && (config?.calls !== null)) {
-			if (typeof(config.calls) === 'object') {
-				for (let [ k, v ] of ((config.calls instanceof Map) ? config.calls.entries() : Object.entries(config.calls))) {
-					if (! (k && (typeof(k) === 'string'))) {
-						throw new Error(`Invalid calls configuration (function name)`);
-					}
-					if (! (v && (typeof(v) === 'function'))) {
-						throw new Error(`Invalid calls configuration (callback function ${k})`);
-					}
-					c.calls.set(k, v);
-				}
-			} else {
-				throw new Error(`Invalid calls configuration`);
-			}
-		}
+		c.calls = this.#processCalls(config?.calls);
 		this.#expression = expression;
 		this.#config = c;
 	}
@@ -41,16 +27,41 @@ class Evaluator {
 	#expression;
 	#config;
 
-	async evaluate() {
-		let r = await this.evaluateWithStats();
+	async evaluate(context) {
+		let r = await this.evaluateWithStats(context);
 		return r.result;
 	}
 
-	async evaluateWithStats() {
+	async evaluateWithStats(context) {
 		let stats = { opCount: 0, scopeCount: 0, scopeDepth: 0, scopeDepthMax: 0, varCount: 0, strCount: 0, strChars: 0 };
-		let r = await this.#evaluateInternal(this.#expression, [], stats);
+		context = { calls: this.#processCalls(context?.calls) };
+		let r = await this.#evaluateInternal(this.#expression, [], stats, context);
 		delete stats.scopeDepth;
 		return { result: r, stats };
+	}
+
+	#processCalls(calls) {
+		let c = new Map();
+		if ((calls !== undefined) && (calls !== null)) {
+			if (typeof(calls) === 'object') {
+				for (let [ k, v ] of ((calls instanceof Map) ? calls.entries() : Object.entries(calls))) {
+					if (! (k && (typeof(k) === 'string'))) {
+						throw new Error(`Invalid calls configuration (function name)`);
+					}
+					if (this.#validScalar(v)) {
+						let r = v;
+						v = (function() { return r }); 
+					}
+					if (typeof(v) !== 'function') {
+						throw new Error(`Invalid calls configuration (callback function ${k})`);
+					}
+					c.set(k, v);
+				}
+			} else {
+				throw new Error(`Invalid calls configuration`);
+			}
+		}
+		return c.size > 0 ? c : null;
 	}
 
 	#checkStatLimits(stats) {
@@ -69,7 +80,7 @@ class Evaluator {
 		}
 	}
 
-	async #evaluateInternal(expression, stack, stats) {
+	async #evaluateInternal(expression, stack, stats, context) {
 		if (! Number.isSafeInteger(stats?.opCount)) {
 			throw new Error('Internal error');
 		}
@@ -100,7 +111,7 @@ class Evaluator {
 				if (av.length != 1) {
 					throw new Error('Invalid expression av');
 				}
-				let v = await this.#evaluateInternal(av[0], stack, stats);
+				let v = await this.#evaluateInternal(av[0], stack, stats, context);
 				if (! this.#validScalar(v)) {
 					throw new Error('Invalid expression operand value');
 				}
@@ -113,7 +124,7 @@ class Evaluator {
 				}
 				let v = 0;
 				for (let o of av) {
-					let ov = await this.#evaluateInternal(o, stack, stats);
+					let ov = await this.#evaluateInternal(o, stack, stats, context);
 					if (ov === null) {
 						return null;
 					} else if (this.#validNumber(ov)) {
@@ -132,14 +143,14 @@ class Evaluator {
 				if (av.length < 2) {
 					throw new Error('Invalid expression av');
 				}
-				let v = await this.#evaluateInternal(av.shift(), stack, stats);
+				let v = await this.#evaluateInternal(av.shift(), stack, stats, context);
 				if (v === null) {
 					return null;
 				} else if (! this.#validNumber(v)) {
 					throw new Error('Invalid expression operand');
 				}
 				for (let o of av) {
-					let ov = await this.#evaluateInternal(o, stack, stats);
+					let ov = await this.#evaluateInternal(o, stack, stats, context);
 					if (ov === null) {
 						return null;
 					} else if (this.#validNumber(ov)) {
@@ -160,7 +171,7 @@ class Evaluator {
 				}
 				let v = 1;
 				for (let o of av) {
-					let ov = await this.#evaluateInternal(o, stack, stats);
+					let ov = await this.#evaluateInternal(o, stack, stats, context);
 					if (ov === null) {
 						return null;
 					} else if (this.#validNumber(ov)) {
@@ -180,13 +191,13 @@ class Evaluator {
 				if (av.length != 2) {
 					throw new Error('Invalid expression av');
 				}
-				let left = await this.#evaluateInternal(av.shift(), stack, stats);
+				let left = await this.#evaluateInternal(av.shift(), stack, stats, context);
 				if (left === null) {
 					return null;
 				} else if (! this.#validNumber(left)) {
 					throw new Error('Invalid expression operand');
 				}
-				let right = await this.#evaluateInternal(av.shift(), stack, stats);
+				let right = await this.#evaluateInternal(av.shift(), stack, stats, context);
 				if (right === null) {
 					return null;
 				} else if (! (this.#validNumber(right) && (right != 0))) {
@@ -213,7 +224,7 @@ class Evaluator {
 				if (av.length != 1) {
 					throw new Error('Invalid expression av');
 				}
-				let v = await this.#evaluateInternal(av[0], stack, stats);
+				let v = await this.#evaluateInternal(av[0], stack, stats, context);
 				if (v === null) {
 					return null;
 				}
@@ -229,7 +240,7 @@ class Evaluator {
 				if (av.length < 1) {
 					throw new Error('Invalid expression av');
 				}
-				let v = await this.#evaluateInternal(av.shift(), stack, stats);
+				let v = await this.#evaluateInternal(av.shift(), stack, stats, context);
 				if (v === null) {
 					return null;
 				}
@@ -238,7 +249,7 @@ class Evaluator {
 					throw new Error('Invalid expression operand value');
 				}
 				for (let o of av) {
-					let ov = await this.#evaluateInternal(o, stack, stats);
+					let ov = await this.#evaluateInternal(o, stack, stats, context);
 					if (ov === null) {
 						return null;
 					}
@@ -266,13 +277,13 @@ class Evaluator {
 				if (av.length != 2) {
 					throw new Error('Invalid expression av');
 				}
-				let left = await this.#evaluateInternal(av.shift(), stack, stats);
+				let left = await this.#evaluateInternal(av.shift(), stack, stats, context);
 				if (left === null) {
 					return null;
 				} else if (! this.#validScalar(left)) {
 					throw new Error('Invalid expression operand');
 				}
-				let right = await this.#evaluateInternal(av.shift(), stack, stats);
+				let right = await this.#evaluateInternal(av.shift(), stack, stats, context);
 				if (right === null) {
 					return null;
 				} else if (! (this.#validScalar(right))) {
@@ -294,13 +305,13 @@ class Evaluator {
 				if (av.length != 2) {
 					throw new Error('Invalid expression av');
 				}
-				let left = await this.#evaluateInternal(av.shift(), stack, stats);
+				let left = await this.#evaluateInternal(av.shift(), stack, stats, context);
 				if (left === null) {
 					return null;
 				} else if (! this.#validNumber(left)) {
 					throw new Error('Invalid expression operand');
 				}
-				let right = await this.#evaluateInternal(av.shift(), stack, stats);
+				let right = await this.#evaluateInternal(av.shift(), stack, stats, context);
 				if (right === null) {
 					return null;
 				} else if (! (this.#validNumber(right))) {
@@ -330,7 +341,7 @@ class Evaluator {
 				while (av.length >= 1) {
 					let condition;
 					if (av.length >= 2) {
-						condition = await this.#evaluateInternal(av.shift(), stack, stats);
+						condition = await this.#evaluateInternal(av.shift(), stack, stats, context);
 						if (condition === null) {
 							condition = false;
 						} else {
@@ -344,7 +355,7 @@ class Evaluator {
 					}
 					let result = av.shift();
 					if (condition) {
-						let v = await this.#evaluateInternal(result, stack, stats);
+						let v = await this.#evaluateInternal(result, stack, stats, context);
 						if (! this.#validScalar(v)) {
 							throw new Error('Invalid expression call value');
 						}
@@ -362,7 +373,13 @@ class Evaluator {
 				if (! this.#validString(name)) {
 					throw new Error(`Invalid function name in 'call' (string constant required)`);
 				}
-				let cb = this.#config.calls.get(name);
+				let cb = undefined;
+				if (context.calls) {
+					cb = context.calls.get(name);
+				}
+				if ((cb === undefined) && this.#config.calls) {
+					cb = this.#config.calls.get(name);
+				}
 				if (cb === undefined) {
 					throw new Error(`Undefined expression call '${name}'`);
 				}
@@ -371,7 +388,7 @@ class Evaluator {
 				}
 				let cav = [];
 				for (let o of av) {
-					let ov = await this.#evaluateInternal(o, stack, stats);
+					let ov = await this.#evaluateInternal(o, stack, stats, context);
 					if (! this.#validScalar(ov)) {
 						throw new Error('Invalid expression call parameter');
 					}
@@ -447,7 +464,7 @@ class Evaluator {
 						if (scope) {
 							stack.push(scope);
 						}
-						v = await this.#evaluateInternal(av.shift(), stack, stats);
+						v = await this.#evaluateInternal(av.shift(), stack, stats, context);
 						if (! this.#validScalar(v)) {
 							throw new Error('Invalid expression operand value');
 						}
@@ -468,7 +485,7 @@ class Evaluator {
 			}
 		case 'coalesce':
 			for (let o of av) {
-                let v = await this.#evaluateInternal(o, stack, stats);
+                let v = await this.#evaluateInternal(o, stack, stats, context);
                 if (! this.#validScalar(v)) {
                     throw new Error('Invalid expression operand value');
                 }				
@@ -482,7 +499,7 @@ class Evaluator {
 				if (av.length != 1) {
 					throw new Error('Invalid expression av');
 				}
-				let v = await this.#evaluateInternal(av[0], stack, stats);
+				let v = await this.#evaluateInternal(av[0], stack, stats, context);
 				if (! this.#validScalar(v)) {
 					throw new Error('Invalid expression operand value');
 				}
@@ -493,7 +510,7 @@ class Evaluator {
 				if (av.length != 1) {
 					throw new Error('Invalid expression av');
 				}
-				let v = await this.#evaluateInternal(av[0], stack, stats);
+				let v = await this.#evaluateInternal(av[0], stack, stats, context);
 				if (! this.#validScalar(v)) {
 					throw new Error('Invalid expression operand value');
 				}
