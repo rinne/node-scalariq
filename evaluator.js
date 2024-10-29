@@ -3,9 +3,9 @@
 class Evaluator {
 
     constructor(expression, config) {
-		let c = { limits: { opCount: 1000, scopeCount: 200, scopeDepth: 100, varCount: 200, strCount: null, strChars: 10000 },
+		let c = { limits: { opCount: 1000, scopeCount: 200, scopeDepth: 100, varCount: 200, strCount: null, strChars: 10000, evalTime: 5000, callTime: 1000 },
 				  calls: null };
-		for (let k of [ 'opCount', 'scopeCount', 'scopeDepth', 'varCount', 'strCount', 'strChars' ]) {
+		for (let k of [ 'opCount', 'scopeCount', 'scopeDepth', 'varCount', 'strCount', 'strChars', 'evalTime', 'callTime' ]) {
 			if (config?.limits === null) {
 				c.limits[k] = 0;
 			} else if (Number.isSafeInteger(config?.limits) && (config.limits >= 0)) {
@@ -34,8 +34,10 @@ class Evaluator {
 
 	async evaluateWithStats(context) {
 		let stats = { opCount: 0, scopeCount: 0, scopeDepth: 0, scopeDepthMax: 0, varCount: 0, strCount: 0, strChars: 0 };
-		context = { calls: this.#processCalls(context?.calls) };
-		let r = await this.#evaluateInternal(this.#expression, [], stats, context);
+		context = { calls: this.#processCalls(context?.calls),
+					startTime: Date.now() };
+		let r = await this.#withTimeout(this.#config.limits.evalTime,
+										this.#evaluateInternal(this.#expression, [], stats, context));
 		delete stats.scopeDepth;
 		return { result: r, stats };
 	}
@@ -64,7 +66,11 @@ class Evaluator {
 		return c.size > 0 ? c : null;
 	}
 
-	#checkStatLimits(stats) {
+	#checkStatLimits(stats, context) {
+		let now = Date.now();
+		if ((this.#config.limits.callTime > 0) && (now > (context.startTime + this.#config.limits.evalTime))) {
+			throw new Error(`Expression evaluation limit exceeded (evalTime: now>start+evalTime, ${now}>${context.startTime}+${this.#config.limits.evalTime}`);
+		}
 		for (let p of [ 'opCount', 'scopeCount', 'scopeDepth', 'varCount', 'strCount', 'strChars' ]) {
 			let l = this.#config.limits[p];
 			let v = stats?.[p];
@@ -85,12 +91,12 @@ class Evaluator {
 			throw new Error('Internal error');
 		}
 		stats.opCount++;
-		this.#checkStatLimits(stats);
+		this.#checkStatLimits(stats, context);
 		if (this.#validScalar(expression)) {
 			if (this.#validString(expression)) {
 				stats.strCount++;
 				stats.strChars += expression.length;
-				this.#checkStatLimits(stats);
+				this.#checkStatLimits(stats, context);
 			}
 			return expression;
 		}
@@ -394,14 +400,14 @@ class Evaluator {
 					}
 					cav.push(ov);
 				}
-				let v = await cb(...cav);
+				let v = await this.#withTimeout(this.#config.limits.callTime, cb(...cav));
 				if (! this.#validScalar(v)) {
 					throw new Error(`Invalid expression call '${name}' return value`);
 				}
 				if (this.#validString(v)) {
 					stats.strCount++;
 					stats.strChars += v.length;
-					this.#checkStatLimits(stats);
+					this.#checkStatLimits(stats, context);
 				}
 				return v;
 			}
@@ -420,7 +426,7 @@ class Evaluator {
 						continue;
 					}
 					if (! this.#validScalar(v)) {
-						v = await this.#evaluateInternal(v, stack.slice(0, i), stats);
+						v = await this.#evaluateInternal(v, stack.slice(0, i), stats, context);
 						if (! this.#validScalar(v)) {
 							throw new Error('Invalid variable value');
 						}
@@ -429,7 +435,7 @@ class Evaluator {
 					if (this.#validString(v)) {
 						stats.strCount++;
 						stats.strChars += v.length;
-						this.#checkStatLimits(stats);
+						this.#checkStatLimits(stats, context);
 					}
 					return v;
 				}
@@ -554,6 +560,57 @@ class Evaluator {
 			return (!(x === ''));
 		}
 		return null;
+	}
+
+	async #delay(ms) {
+		if ((ms === undefined) || (ms === null) || (ms === false)) {
+			ms = 0;
+		}
+		if (! Number.isFinite(ms)) {
+			throw new Error('Invalid timeout');
+		}
+		ms = ((ms > 2147483647) ? 2147483647 : ((ms < 0) ? 0 : Math.round(ms)));
+		if (ms == 0) {
+			return Promise.resolve();
+		}
+		return new Promise(function(resolve, reject) { setTimeout(resolve, ms); });
+	}
+
+	async #withTimeout(timeoutMs, promise) {
+		if ((timeoutMs === undefined) || (timeoutMs === null) || (timeoutMs === false)) {
+			timeoutMs = 0;
+		}
+		if (! Number.isFinite(timeoutMs)) {
+			throw new Error('Invalid timeout');
+		}
+		timeoutMs = ((timeoutMs > Number.MAX_SAFE_INTEGER) ? Number.MAX_SAFE_INTEGER : ((timeoutMs < 0) ? 0 : Math.round(timeoutMs)));
+		if (timeoutMs == 0) {
+			return Promise.all( [ promise ] );
+		}
+		if (! (promise instanceof Promise)) {
+			return promise;
+		}
+		let settled = { worker: false, timeout: false };
+		let rv = Promise.race( [ (promise
+								  .then(function(r) { settled.worker = true; return r; })
+								  .catch(function(e) { settled.worker = true; throw e; })),
+								 (((async function(ms, step) {
+									 let start = Date.now();
+									 let duration = 0;
+									 let t0, t1 = Date.now();
+									 while (((t0 = t1) < (start + ms)) && (duration < ms) && (! settled.worker)) {
+										 let sleep = Math.min(step, (start + ms) - t0, ms - duration);
+										 await new Promise(function(resolve, reject) { setTimeout(resolve, sleep); });
+										 t1 = Date.now();
+										 duration += Math.max(sleep, t1 - t0);
+									 }
+									 if (settled.worker) {
+										 return;
+									 }
+									 throw new Error('Timeout'); })(timeoutMs, 200))
+								  .then(function(r) { settled.timeout = true; return r; })
+								  .catch(function(e) { settled.timeout = true; throw e; })) ] );
+		return rv;
 	}
 
 }
