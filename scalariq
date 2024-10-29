@@ -192,7 +192,7 @@ function out(x) {
 						strCount: opt.value('limit-strings'),
 						strChars: opt.value('limit-string-chars') });
 		let c = new Evaluator(expr, { calls, limits } );
-		let rv = await c.evaluateWithStats();
+		let rv = await c.evaluateWithContext();
 		if (opt.value('no-output')) {
 			process.exit(0);
 		}
