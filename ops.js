@@ -25,7 +25,7 @@ const [ opName, opNumber ] = (function() {
 		  [ 'isnull', 20 ],
 		  [ 'typeof', 21 ] ]
 	);
-	let opNames = new Map(opNumbers.entries().map((x)=>([x[1],x[0]])));
+	let opNames = new Map(Array.from(opNumbers.entries()).map((x)=>([x[1],x[0]])));
 	return [
 		function(num) {
 			let r = opNames.get(num);
