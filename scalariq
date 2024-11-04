@@ -5,6 +5,7 @@ const Lexer = require('./lexer');
 const Parser = require('./parser');
 const Generator = require('./generator');
 const Optimizer = require('./optimizer');
+const Linearizer = require('./linearizer');
 const Evaluator = require('./evaluator');
 
 const MathCalls = require('./math-calls');
@@ -34,6 +35,8 @@ async function commandLineOptsParse() {
 					{ longName: 'generate',
 					  description: 'Generate the expression from the input',
 					  conflictsWith: [ 'tokenize', 'parse', 'check' ] },
+					{ longName: 'linear',
+					  description: 'Convert the expression to linear form' },
 					{ longName: 'optimize',
 					  description: 'Optimize the compiled expression' },
 					{ longName: 'check',
@@ -169,6 +172,10 @@ function out(x) {
 			expr = oexpr;
 		}
 		if (opt.value('generate')) {
+			if (opt.value('linear')) {
+				let z = new Linearizer(expr);
+				expr = z.implode();
+			}
 			out(expr);
 			process.exit(0);
 		}
@@ -177,6 +184,10 @@ function out(x) {
 			let check = o.check();
 			out(check);
 			process.exit(0);
+		}
+		if (opt.value('linear')) {
+			let z = new Linearizer(expr);
+			expr = z.implode();
 		}
 		let calls = Object.assign({},
 								  opt.value('enable-math') ? MathCalls : {},
