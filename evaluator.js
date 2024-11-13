@@ -386,7 +386,7 @@ class Evaluator {
 					if (av.length >= 2) {
 						condition = await this.#evaluateInternal(av.shift(), stack, context);
 						if (condition === null) {
-							context.warnings.push(`${expression.op}: Condition expression is NULL. Interpreted as FALSE.`);
+							context.warnings.push(`${expression.op}: NULL condition is interpreted as FALSE.`);
 							condition = false;
 						} else {
 							condition = this.#booleanizeScalar(condition);
