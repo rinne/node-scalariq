@@ -25,6 +25,7 @@ async function commandLineOptsParse() {
     const ou = require('optist/util');
     opt = ((new (require('optist')))
            .opts( [ { longName: 'debug',
+					  shortName: 'd',
 					  description: 'Enable debug messages' },
 					{ longName: 'tokenize',
 					  description: 'Tokenization of the input',
