@@ -48,10 +48,14 @@ class Evaluator {
 	async evaluateWithContext(context) {
 		context = { stats: { opCount: 0, scopeCount: 0, scopeDepth: 0, scopeDepthMax: 0, varCount: 0, strCount: 0, strChars: 0 },
 					calls: this.#processCalls(context?.calls),
-					startTime: Date.now() };
+					startTime: Date.now(),
+					warnings: [] };
 		let r = await this.#withTimeout(this.#config.limits.evalTime,
 										this.#evaluateInternal(this.#expression, [], context));
 		context.endTime = Date.now();
+		if (context.warnings.length < 1) {
+			delete context.warnings;
+		}
 		delete context.calls;
 		delete context.stats.scopeDepth;
 		context.result = r;
@@ -152,10 +156,12 @@ class Evaluator {
 					} else if (this.#validNumber(ov)) {
 						v += ov;
 						if (! this.#validNumber(v)) {
-							throw new Error('Expression overflow');
+							context.warnings.push(`${expression.op}: Arithmetic overflow. Result defaults to NULL.`);
+							return null;
 						}
 					} else {
-						throw new Error('Invalid expression operand');
+						context.warnings.push(`${expression.op}: Operand is not a valid number. Result defaults to NULL.`);
+						return null;
 					}
 				}
 				return v;
@@ -169,7 +175,8 @@ class Evaluator {
 				if (v === null) {
 					return null;
 				} else if (! this.#validNumber(v)) {
-					throw new Error('Invalid expression operand');
+					context.warnings.push(`${expression.op}: Operand is not a valid number. Result defaults to NULL.`);
+					return null;
 				}
 				for (let o of av) {
 					let ov = await this.#evaluateInternal(o, stack, context);
@@ -178,10 +185,12 @@ class Evaluator {
 					} else if (this.#validNumber(ov)) {
 						v -= ov;
 						if (! this.#validNumber(v)) {
-							throw new Error('Expression overflow');
+							context.warnings.push(`${expression.op}: Arithmetic overflow. Result defaults to NULL.`);
+							return null;
 						}
 					} else {
-						throw new Error('Invalid expression operand');
+						context.warnings.push(`${expression.op}: Operand is not a valid number. Result defaults to NULL.`);
+						return null;
 					}
 				}
 				return v;
@@ -199,10 +208,12 @@ class Evaluator {
 					} else if (this.#validNumber(ov)) {
 						v *= ov;
 						if (! this.#validNumber(v)) {
-							throw new Error('Expression overflow');
+							context.warnings.push(`${expression.op}: Arithmetic overflow. Result defaults to NULL.`);
+							return null;
 						}
 					} else {
-						throw new Error('Invalid expression operand');
+						context.warnings.push(`${expression.op}: Operand is not a valid number. Result defaults to NULL.`);
+						return null;
 					}
 				}
 				return v;
@@ -217,13 +228,18 @@ class Evaluator {
 				if (left === null) {
 					return null;
 				} else if (! this.#validNumber(left)) {
-					throw new Error('Invalid expression operand');
+					context.warnings.push(`${expression.op}: Operand is not a valid number. Result defaults to NULL.`);
+					return null;
 				}
 				let right = await this.#evaluateInternal(av.shift(), stack, context);
 				if (right === null) {
 					return null;
-				} else if (! (this.#validNumber(right) && (right != 0))) {
-					throw new Error('Invalid expression operand');
+				} else if (! this.#validNumber(right)) {
+					context.warnings.push(`${expression.op}: Operand is not a valid number. Result defaults to NULL.`);
+					return null;
+				} else if (right == 0) {
+					context.warnings.push(`${expression.op}: Division by zero. Result defaults to NULL.`);
+					return null;
 				}
 				let v;
 				switch (expression.op) {
@@ -237,7 +253,8 @@ class Evaluator {
 					throw new Error('Internal error');
 				}
 				if (! this.#validNumber(v)) {
-					throw new Error('Expression overflow');
+					context.warnings.push(`${expression.op}: Arithmetic overflow. Result defaults to NULL.`);
+					return null;
 				}
 				return v;
 			}
@@ -252,7 +269,8 @@ class Evaluator {
 				}
 				v = this.#booleanizeScalar(v);
 				if (! this.#validBoolean(v)) {
-					throw new Error('Invalid expression operand value');
+					context.warnings.push(`${expression.op}: Unable to booleanize operand. Result defaults to NULL.`);
+					return null;
 				}
 				return v ? false : true;
 			}
@@ -268,7 +286,8 @@ class Evaluator {
 				}
 				v = this.#booleanizeScalar(v);
 				if (! this.#validBoolean(v)) {
-					throw new Error('Invalid expression operand value');
+					context.warnings.push(`${expression.op}: Unable to booleanize operand. Result defaults to NULL.`);
+					return null;
 				}
 				for (let o of av) {
 					let ov = await this.#evaluateInternal(o, stack, context);
@@ -277,7 +296,8 @@ class Evaluator {
 					}
 					ov = this.#booleanizeScalar(ov);
 					if (! this.#validBoolean(ov)) {
-						throw new Error('Invalid expression operand value');
+						context.warnings.push(`${expression.op}: Unable to booleanize operand. Result defaults to NULL.`);
+						return null;
 					}
 					switch (expression.op) {
 					case 'or':
@@ -286,9 +306,6 @@ class Evaluator {
 					case 'and':
 						v &&= ov;
 						break;
-					}
-					if (! this.#validBoolean(v)) {
-						throw new Error('Expression evaluation overflow');
 					}
 				}
 				return v;
@@ -303,13 +320,15 @@ class Evaluator {
 				if (left === null) {
 					return null;
 				} else if (! this.#validScalar(left)) {
-					throw new Error('Invalid expression operand');
+					context.warnings.push(`${expression.op}: Operand is not a valid scalar. Result defaults to NULL.`);
+					return null;
 				}
 				let right = await this.#evaluateInternal(av.shift(), stack, context);
 				if (right === null) {
 					return null;
 				} else if (! (this.#validScalar(right))) {
-					throw new Error('Invalid expression operand');
+					context.warnings.push(`${expression.op}: Operand is not a valid scalar. Result defaults to NULL.`);
+					return null;
 				}
 				switch (expression.op) {
 				case 'eq':
@@ -331,13 +350,15 @@ class Evaluator {
 				if (left === null) {
 					return null;
 				} else if (! this.#validNumber(left)) {
-					throw new Error('Invalid expression operand');
+					context.warnings.push(`${expression.op}: Operand is not a valid number. Result defaults to NULL.`);
+					return null;
 				}
 				let right = await this.#evaluateInternal(av.shift(), stack, context);
 				if (right === null) {
 					return null;
 				} else if (! (this.#validNumber(right))) {
-					throw new Error('Invalid expression operand');
+					context.warnings.push(`${expression.op}: Operand is not a valid number. Result defaults to NULL.`);
+					return null;
 				}
 				switch (expression.op) {
 				case 'lt':
@@ -365,6 +386,7 @@ class Evaluator {
 					if (av.length >= 2) {
 						condition = await this.#evaluateInternal(av.shift(), stack, context);
 						if (condition === null) {
+							context.warnings.push(`${expression.op}: Condition expression is NULL. Interpreted as FALSE.`);
 							condition = false;
 						} else {
 							condition = this.#booleanizeScalar(condition);
@@ -373,15 +395,12 @@ class Evaluator {
 						condition = true;
 					}
 					if (! this.#validBoolean(condition)) {
-						throw new Error('Invalid condition value type');
+						context.warnings.push(`${expression.op}: Unable to booleanize condition expression. Interpreted as FALSE.`);
+						condition = false;
 					}
 					let result = av.shift();
 					if (condition) {
-						let v = await this.#evaluateInternal(result, stack, context);
-						if (! this.#validScalar(v)) {
-							throw new Error('Invalid expression call value');
-						}
-						return v;
+						return await this.#evaluateInternal(result, stack, context);
 					}
 				}
 				throw new Error('Invalid expression condition');
@@ -412,13 +431,20 @@ class Evaluator {
 				for (let o of av) {
 					let ov = await this.#evaluateInternal(o, stack, context);
 					if (! this.#validScalar(ov)) {
-						throw new Error('Invalid expression call parameter');
+						throw new Error('Internal error');
 					}
 					cav.push(ov);
 				}
-				let v = await this.#withTimeout(this.#config.limits.callTime, cb(...cav));
+				let v;
+				try {
+					v = await this.#withTimeout(this.#config.limits.callTime, cb(...cav));
+				} catch (e) {
+					context.warnings.push(`${expression.op}: External call '${name}' causes an error (${e.message}). Return value defaults to NULL.`);
+					v = null;
+				}
 				if (! this.#validScalar(v)) {
-					throw new Error(`Invalid expression call '${name}' return value`);
+					context.warnings.push(`${expression.op}: Invalid return value from external call '${name}' defaults to NULL.`);
+					v = null;
 				}
 				if (this.#validString(v)) {
 					context.stats.strCount++;
@@ -488,7 +514,7 @@ class Evaluator {
 						}
 						v = await this.#evaluateInternal(av.shift(), stack, context);
 						if (! this.#validScalar(v)) {
-							throw new Error('Invalid expression operand value');
+							throw new Error('Internal error');
 						}
 					} catch(e) {
 						error = e;
@@ -534,7 +560,7 @@ class Evaluator {
 				}
 				let v = await this.#evaluateInternal(av[0], stack, context);
 				if (! this.#validScalar(v)) {
-					throw new Error('Invalid expression operand value');
+					throw new Error('Internal error');
 				}
 				if (v === null) {
 					return 'null';
